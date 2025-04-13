@@ -1,5 +1,5 @@
 import React from 'react';
-import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+import { render, screen, fireEvent } from '@testing-library/react';
 import { LoginForm } from '@/components/login-form';
 import { useLoginForm } from '@/hooks/use-login-form';
 

@@ -13,9 +13,9 @@ const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || '/api';
  */
 export class ApiError extends Error {
   status: number;
-  data?: any;
+  data?: unknown;
 
-  constructor(message: string, status: number, data?: any) {
+  constructor(message: string, status: number, data?: unknown) {
     super(message);
     this.name = 'ApiError';
     this.status = status;
@@ -89,21 +89,21 @@ export const api = {
   get: <T>(endpoint: string, options?: RequestInit) => 
     fetchApi<T>(endpoint, { ...options, method: 'GET' }),
   
-  post: <T>(endpoint: string, data?: any, options?: RequestInit) =>
+  post: <T, D = Record<string, unknown>>(endpoint: string, data?: D, options?: RequestInit) =>
     fetchApi<T>(endpoint, {
       ...options,
       method: 'POST',
       body: data ? JSON.stringify(data) : undefined,
     }),
   
-  put: <T>(endpoint: string, data?: any, options?: RequestInit) =>
+  put: <T, D = Record<string, unknown>>(endpoint: string, data?: D, options?: RequestInit) =>
     fetchApi<T>(endpoint, {
       ...options,
       method: 'PUT',
       body: data ? JSON.stringify(data) : undefined,
     }),
   
-  patch: <T>(endpoint: string, data?: any, options?: RequestInit) =>
+  patch: <T, D = Record<string, unknown>>(endpoint: string, data?: D, options?: RequestInit) =>
     fetchApi<T>(endpoint, {
       ...options,
       method: 'PATCH',

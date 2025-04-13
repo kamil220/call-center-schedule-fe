@@ -1,6 +1,11 @@
 import { StateCreator } from 'zustand';
 import { AppRouterInstance } from 'next/dist/shared/lib/app-router-context.shared-runtime';
 
+// State with user property
+interface UserAwareState {
+  user: unknown;
+}
+
 // Type of middleware function
 type NavigationMiddleware = <T extends NavigationState>(
   f: StateCreator<T, [], []>
@@ -23,7 +28,7 @@ export const createNavigationMiddleware = (): NavigationMiddleware => (create) =
 };
 
 // Middleware factory to include navigation in a store
-export const withNavigation = <T extends NavigationState>(config: StateCreator<T, [], []>): StateCreator<T, [], []> => (set, get, api) => {
+export const withNavigation = <T extends NavigationState & UserAwareState>(config: StateCreator<T, [], []>): StateCreator<T, [], []> => (set, get, api) => {
   return config(
     (partial, replace) => {
       // Intercept state updates to handle navigation effects
@@ -64,7 +69,7 @@ export const createNavigationSlice = <T>(): StateCreator<T & NavigationState, []
       console.error('Router not initialized. Call setRouter first.');
     }
   },
-  setRouter: (router: AppRouterInstance) => set({ router } as any),
+  setRouter: (router: AppRouterInstance) => set({ router } as Partial<T & NavigationState>),
 });
 
 // This is a placeholder and should be replaced with your actual store

@@ -21,7 +21,7 @@ export const useAuthStore = create<AuthState>()(
   persist(
     // Add devtools middleware for debugging (shows up in Redux DevTools)
     devtools(
-      (set, get) => ({
+      (set) => ({
         // Initial state
         user: null,
         isAuthenticated: false,
@@ -52,7 +52,7 @@ export const useAuthStore = create<AuthState>()(
             }
           } catch (error) {
             set({
-              error: 'An unexpected error occurred',
+              error: 'An unexpected error occurred: ' + error,
               isLoading: false,
             });
           }
@@ -74,7 +74,7 @@ export const useAuthStore = create<AuthState>()(
             // e.g., redirecting the user
           } catch (error) {
             set({
-              error: 'Error during logout',
+              error: 'Error during logout: ' + error,
               isLoading: false,
             });
           }
@@ -90,13 +90,18 @@ export const useAuthStore = create<AuthState>()(
       // Use sessionStorage instead of localStorage
       storage: {
         getItem: (name) => {
-          // When running on the server, return null
           if (typeof window === 'undefined') return null;
-          return sessionStorage.getItem(name);
+          const str = sessionStorage.getItem(name);
+          if (!str) return null;
+          try {
+            return JSON.parse(str);
+          } catch {
+            return null;
+          }
         },
         setItem: (name, value) => {
           if (typeof window !== 'undefined') {
-            sessionStorage.setItem(name, value);
+            sessionStorage.setItem(name, JSON.stringify(value));
           }
         },
         removeItem: (name) => {
