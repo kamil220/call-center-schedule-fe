@@ -1,8 +1,10 @@
 'use client';
 
 import { useState } from 'react';
-import { useRouter } from 'next/navigation';
+// Remove useRouter import, as login function handles redirection
+// import { useRouter } from 'next/navigation';
 import { User, UserRole } from '@/types/user';
+import { useAuth } from '@/context/auth-context'; // Import useAuth
 
 // Mock API call function - now returns User object on success
 async function mockLoginApi(
@@ -39,7 +41,8 @@ export function useLoginForm() {
   const [password, setPassword] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const router = useRouter();
+  // const router = useRouter(); // No longer needed here
+  const { login } = useAuth(); // Get login function from context
 
   const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -49,9 +52,10 @@ export function useLoginForm() {
     try {
       const result = await mockLoginApi(email, password);
       if (result.success && result.user) {
-        // TODO: Store user data (e.g., in context, state management library)
-        console.log('Logged in user:', result.user);
-        router.push('/dashboard');
+        // Call login from context to store user and redirect
+        login(result.user);
+        // console.log('Logged in user:', result.user); // No longer needed here
+        // router.push('/dashboard'); // No longer needed here
       } else {
         setError(result.error || 'Login failed');
       }
