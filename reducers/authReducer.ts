@@ -8,7 +8,7 @@ export const initialState: AuthState = {
 };
 
 // Implement Reducer Function
-export const authReducer = (state: AuthState, action: AuthAction): AuthState => {
+export const authReducer = (state: AuthState = initialState, action: AuthAction): AuthState => {
   switch (action.type) {
     case 'INITIALIZE':
       return {

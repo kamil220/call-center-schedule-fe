@@ -1,48 +1,15 @@
 'use client';
 
 import { useState } from 'react';
-// Remove useRouter import, as login function handles redirection
-// import { useRouter } from 'next/navigation';
-import { User, UserRole } from '@/types/user';
-import { useAuth } from '@/context/auth-context'; // Import useAuth
-
-// Mock API call function - now returns User object on success
-async function mockLoginApi(
-  email: string,
-  password: string
-): Promise<{ success: boolean; user?: User; error?: string }> {
-  // Simulate network delay
-  await new Promise((resolve) => setTimeout(resolve, 500));
-
-  if (email === 'admin@email.com' && password === 'admin') {
-    // Return mock User object for admin
-    const mockAdminUser: User = {
-      id: 'mock-admin-id',
-      email: 'admin@email.com',
-      role: UserRole.ADMIN,
-    };
-    return { success: true, user: mockAdminUser };
-  } else {
-    // Simulate a generic user login for demo purposes - now assigns AGENT role
-    if (password === 'password') { // Example: any email with password 'password' is an AGENT
-        const mockAgentUser: User = {
-            id: `mock-agent-${Math.random().toString(36).substring(7)}`,
-            email: email,
-            role: UserRole.AGENT, // Assign AGENT role
-        };
-        return { success: true, user: mockAgentUser };
-    }
-    return { success: false, error: 'Invalid email or password' };
-  }
-}
+import { useAuth } from '@/context/auth-context';
+import { authService, LoginCredentials } from '@/services/auth.service';
 
 export function useLoginForm() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  // const router = useRouter(); // No longer needed here
-  const { login } = useAuth(); // Get login function from context
+  const { login } = useAuth();
 
   const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -50,12 +17,12 @@ export function useLoginForm() {
     setError(null);
 
     try {
-      const result = await mockLoginApi(email, password);
+      // Use auth service instead of direct mock function
+      const credentials: LoginCredentials = { email, password };
+      const result = await authService.login(credentials);
+      
       if (result.success && result.user) {
-        // Call login from context to store user and redirect
         login(result.user);
-        // console.log('Logged in user:', result.user); // No longer needed here
-        // router.push('/dashboard'); // No longer needed here
       } else {
         setError(result.error || 'Login failed');
       }
