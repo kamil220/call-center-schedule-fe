@@ -1,10 +1,11 @@
 'use client';
 
 import React, { ReactNode, useEffect } from 'react';
-import { Sidebar } from '@/components/sidebar';
 import { useAuthStatus } from '@/store/auth.store';
 import { useRouter } from 'next/navigation';
 import { Loader2 } from 'lucide-react';
+import { AppSidebar } from "@/components/app-sidebar";
+import { SidebarProvider, SidebarInset } from "@/components/ui/sidebar";
 
 export default function DashboardLayout({ children }: { children: ReactNode }) {
   const { isAuthenticated, isLoading } = useAuthStatus();
@@ -35,11 +36,22 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
 
   // Render dashboard layout only if authenticated and not loading
   return (
-    <div className="flex h-screen bg-muted/40">
-      <Sidebar />
-      <main className="flex-1 flex flex-col p-4 sm:p-6 overflow-auto">
-        {children}
-      </main>
-    </div>
+    <SidebarProvider
+      style={
+        {
+          "--sidebar-width": "calc(var(--spacing) * 72)",
+          "--header-height": "calc(var(--spacing) * 12)",
+        } as React.CSSProperties
+      }
+    >
+      <AppSidebar variant="inset" />
+      <SidebarInset>
+        <div className="flex h-screen bg-muted/40">
+          <main className="flex-1 flex flex-col p-4 sm:p-6 overflow-auto">
+            {children}
+          </main>
+        </div>
+      </SidebarInset>
+    </SidebarProvider>
   );
 } 
