@@ -10,14 +10,17 @@ import {
   IconUsers,
   IconListDetails,
   IconTerminal2,
+  IconSettings,
 } from "@tabler/icons-react"
+import { usePathname } from "next/navigation"
 
 import { UserRole } from "@/types/user"
 import { useUser, useHasRole } from "@/store/auth.store"
-import { SidebarMenu, SidebarMenuItem, SidebarMenuButton } from "@/components/ui/sidebar"
+import { SidebarMenu, SidebarMenuItem, SidebarMenuButton, SidebarGroup, SidebarGroupLabel } from "@/components/ui/sidebar"
 
 export function NavRoleBased() {
   const user = useUser()
+  const pathname = usePathname()
   const isTeamManager = useHasRole(UserRole.TEAM_MANAGER)
   const isPlanner = useHasRole(UserRole.PLANNER)
   const isAdmin = useHasRole(UserRole.ADMIN)
@@ -78,18 +81,34 @@ export function NavRoleBased() {
     },
   ]
 
+  // Admin menu items - removed Użytkownicy as it will be in the Administracja section
   const adminMenuItems = [
-    {
-      title: "Użytkownicy",
-      url: "/dashboard/users",
-      icon: IconUsers,
-    },
     {
       title: "Logi systemowe",
       url: "/system-logs",
       icon: IconTerminal2,
     },
   ]
+
+  // New Administracja section with Użytkownicy at the top
+  const administracjaMenuItems = [
+    {
+      title: "Użytkownicy",
+      url: "/dashboard/users",
+      icon: IconUsers,
+    },
+    {
+      title: "Ustawienia",
+      url: "/admin/settings",
+      icon: IconSettings,
+    },
+  ]
+
+  // Check if the current path matches the item's URL
+  const isItemActive = (itemUrl: string) => {
+    return pathname === itemUrl || 
+           (itemUrl !== '/dashboard' && pathname.startsWith(itemUrl));
+  }
 
   // Get all visible menu items based on role
   const visibleItems = React.useMemo(() => {
@@ -104,7 +123,7 @@ export function NavRoleBased() {
     }
     
     if (isAdmin) {
-      items = [...items, ...adminMenuItems]
+      items = [...items, ...administracjaMenuItems, ...adminMenuItems]
     }
     
     return items
@@ -113,17 +132,44 @@ export function NavRoleBased() {
   if (!user) return null
 
   return (
-    <SidebarMenu>
-      {visibleItems.map((item, index) => (
-        <SidebarMenuItem key={index}>
-          <SidebarMenuButton asChild>
-            <a href={item.url}>
-              {item.icon && <item.icon className="size-4" />}
-              <span>{item.title}</span>
-            </a>
-          </SidebarMenuButton>
-        </SidebarMenuItem>
-      ))}
-    </SidebarMenu>
+    <>
+      <SidebarMenu>
+        {visibleItems.map((item, index) => (
+          <SidebarMenuItem key={index}>
+            <SidebarMenuButton 
+              asChild
+              isActive={isItemActive(item.url)}
+            >
+              <a href={item.url}>
+                {item.icon && <item.icon className="size-4" />}
+                <span>{item.title}</span>
+              </a>
+            </SidebarMenuButton>
+          </SidebarMenuItem>
+        ))}
+      </SidebarMenu>
+      
+      {/* Display Administracja section for admin users */}
+      {isAdmin && (
+        <SidebarGroup>
+          <SidebarGroupLabel>Administracja</SidebarGroupLabel>
+          <SidebarMenu>
+            {administracjaMenuItems.map((item, index) => (
+              <SidebarMenuItem key={index}>
+                <SidebarMenuButton 
+                  asChild
+                  isActive={isItemActive(item.url)}
+                >
+                  <a href={item.url}>
+                    {item.icon && <item.icon className="size-4" />}
+                    <span>{item.title}</span>
+                  </a>
+                </SidebarMenuButton>
+              </SidebarMenuItem>
+            ))}
+          </SidebarMenu>
+        </SidebarGroup>
+      )}
+    </>
   )
 } 
