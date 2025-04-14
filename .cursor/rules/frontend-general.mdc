@@ -1,0 +1,80 @@
+---
+description: 
+globs: 
+alwaysApply: true
+---
+## 🧭 Core Principles
+
+- **KISS (Keep It Simple, Stupid):** Favor simple, straightforward solutions. Avoid overengineering and unnecessary abstractions.
+- **DRY (Don't Repeat Yourself):** Minimize duplication through reusable components, hooks, utilities, and services.
+- **Component Reusability:** Design components to be composable and reusable across the application. Avoid building overly specific, one-off components.
+- **Separation of Concerns:** Keep UI components, state management, and business logic (e.g., hooks, services) clearly separated.
+- **Clean Structure:** Maintain a well-organized folder structure. Group related files by domain or functionality (e.g., `components/`, `hooks/`, `store/`, `services/`).
+- ALWAYS use english language and try to not use comments in code
+
+## 🛠️ Tech Stack & Conventions
+
+- **Framework:** React 19
+- **Build Tool:** Vite
+- **Styling:** Tailwind CSS v4
+  - Use Tailwind utility classes directly in components.
+  - Leverage the `@theme` directive as described in the Tailwind v4 documentation.
+
+- **UI Components: [`shadcn/ui`](mdc:https:/ui.shadcn.com/docs/tailwind-v4)**
+  - Use components from `shadcn/ui` for consistency and accessibility.
+  - **Always** add new shadcn/ui components via the CLI:  
+    ```bash
+    npx shadcn@latest add <component_name>
+    ```
+    **Never** create shadcn/ui components manually.
+  - **Before creating a component that uses a shadcn/ui element**, check whether the corresponding file exists in `frontend/src/components/ui/`.  
+    If not, add it using the CLI.
+  - You may customize shadcn/ui components by modifying the generated files in `components/ui`.
+
+- **State Management:**
+  - Use React’s built-in hooks (`useState`, `useReducer`) for local state.
+  - Use `useContext` for simple shared state.
+  - For complex global state, use **Zustand** (preferred) or **Jotai**, keeping solutions minimal and focused.
+
+- **TypeScript:**
+  - Use TypeScript throughout the codebase for static type safety.
+  - Use `interface` for defining object shapes, and `type` for unions, intersections, and primitive type aliases.
+
+- **Refs:**
+  - Do **not** use `React.forwardRef`.
+  - Components should accept `ref` as a regular prop when necessary.
+  - For styling primitives, use `data-slot` attributes as per shadcn/ui v4 conventions.
+
+- **File Naming:**
+  - Use **PascalCase** for component files (e.g., `LoginForm.tsx`).
+  - Use **camelCase** for non-component files (e.g., `useLoginForm.ts`, `apiClient.ts`).
+
+- **Import Order:**
+  1. React imports (`import React from 'react';`)
+  2. External libraries (`import { Button } from 'shadcn/ui';`)
+  3. Absolute internal imports (`import { Sidebar } from '@/components/sidebar';`)
+  4. Relative imports (`import { fetchData } from './utils';`)
+
+  ✅ Prefer absolute imports (`@/`) via `tsconfig.json` paths for better readability and maintainability.
+
+## 🎨 Code Style & Structure
+
+- Follow React and TypeScript best practices.
+- Use **Prettier** for consistent formatting and **ESLint** for linting (config to be added).
+- Write clean, concise component logic.
+  - Extract complex logic into custom hooks (`use...`) or utilities (`lib/`).
+  - Components should remain as "dumb" as possible — business logic belongs in hooks or services.
+- Write unit tests for hooks, services, and components.
+  - Place test files in `__tests__` directories next to the tested files.
+  - Use `.test.tsx` / `.test.ts` suffixes.
+  - Use [Jest](mdc:https:/jestjs.io) and [React Testing Library](mdc:https:/testing-library.com) as the primary testing tools.
+
+## 🧱 Next.js App Directory Guidelines
+
+- Use the [App Router](mdc:https:/nextjs.org/docs/app) structure under `frontend/app/`.
+- Each route (page) should have its own folder with `page.tsx` and optional `layout.tsx`.
+- Avoid placing business logic directly in `app/`. Move it to `hooks/`, `services/`, `store/`, or `components/`.
+
+---
+
+*Always reference this file (`@frontend-general.mdc`) when working on frontend code.*
