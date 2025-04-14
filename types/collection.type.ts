@@ -1,5 +1,6 @@
 /**
- * Common API types shared across different endpoints
+ * Common types for collection endpoints
+ * Contains shared interfaces for pagination, sorting, and collection responses
  */
 
 /**

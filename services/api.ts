@@ -2,30 +2,17 @@
  * Base API client for making HTTP requests
  * 
  * This file provides utility functions for interacting with the backend API.
- * It can be extended with more specialized functions as needed.
+ * It can be extended with more specialized functions.
  */
 
 import { getTokenFromCookies } from '@/lib/cookies';
 import { clearAuthCookies } from '@/lib/cookies';
-import { PaginatedResponse, PaginationParams } from '../types/api';
+import { PaginatedResponse } from '../types/collection.type';
+import { User, UserListParams } from '../types/user.type';
+import { ApiError } from '../types/api.type';
 
 // Constants
 const API_BASE_URL = '/api';
-
-/**
- * Custom error class for API errors
- */
-export class ApiError extends Error {
-  status: number;
-  data?: unknown;
-
-  constructor(message: string, status: number, data?: unknown) {
-    super(message);
-    this.name = 'ApiError';
-    this.status = status;
-    this.data = data;
-  }
-}
 
 // Handle unauthorized error (401)
 // Using a function so we can import this before the store is initialized
@@ -102,44 +89,6 @@ export async function fetchApi<T>(
       0
     );
   }
-}
-
-/**
- * User role types
- */
-export type UserRole = 
-  | 'ROLE_ADMIN'
-  | 'ROLE_PLANNER'
-  | 'ROLE_TEAM_MANAGER'
-  | 'ROLE_AGENT';
-
-/**
- * Sort field options for users
- */
-export type UserSortField = 'id' | 'email' | 'firstName' | 'lastName' | 'active';
-
-/**
- * User filter and pagination parameters
- */
-export interface UserListParams extends PaginationParams<UserSortField> {
-  firstName?: string;
-  lastName?: string;
-  email?: string;
-  role?: UserRole;
-  active?: boolean;
-}
-
-/**
- * User data structure
- */
-export interface User {
-  id: string;
-  email: string;
-  firstName: string;
-  lastName: string;
-  fullName: string;
-  roles: string[];
-  active: boolean;
 }
 
 /**
