@@ -1,13 +1,13 @@
 'use client';
 
 import React, { ReactNode, useEffect } from 'react';
-import { Sidebar } from '@/components/sidebar'; // We'll create this next
-import { useAuth } from '@/context/auth-context';
+import { Sidebar } from '@/components/sidebar';
+import { useAuthStatus } from '@/store/auth.store';
 import { useRouter } from 'next/navigation';
 import { Loader2 } from 'lucide-react';
 
 export default function DashboardLayout({ children }: { children: ReactNode }) {
-  const { isAuthenticated, isLoading } = useAuth();
+  const { isAuthenticated, isLoading } = useAuthStatus();
   const router = useRouter();
 
   // Use useEffect to handle redirection after render

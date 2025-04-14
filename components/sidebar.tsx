@@ -4,7 +4,7 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
-import { useAuth } from '@/context/auth-context';
+import { useUser, useAuthActions } from '@/store/auth.store';
 import { UserRole } from '@/types/user';
 import {
   LayoutDashboard,
@@ -45,7 +45,8 @@ const roleLinks = {
 
 export function Sidebar() {
   const pathname = usePathname();
-  const { user, logout } = useAuth();
+  const user = useUser();
+  const { logout } = useAuthActions();
 
   const links = user ? [...commonLinks, ...(roleLinks[user.role] || [])] : [...commonLinks];
 
