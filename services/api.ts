@@ -7,6 +7,7 @@
 
 import { getTokenFromCookies } from '@/lib/cookies';
 import { clearAuthCookies } from '@/lib/cookies';
+import { PaginatedResponse, PaginationParams } from '../types/api';
 
 // Constants
 const API_BASE_URL = '/api';
@@ -104,6 +105,44 @@ export async function fetchApi<T>(
 }
 
 /**
+ * User role types
+ */
+export type UserRole = 
+  | 'ROLE_ADMIN'
+  | 'ROLE_PLANNER'
+  | 'ROLE_TEAM_MANAGER'
+  | 'ROLE_AGENT';
+
+/**
+ * Sort field options for users
+ */
+export type UserSortField = 'id' | 'email' | 'firstName' | 'lastName' | 'active';
+
+/**
+ * User filter and pagination parameters
+ */
+export interface UserListParams extends PaginationParams<UserSortField> {
+  firstName?: string;
+  lastName?: string;
+  email?: string;
+  role?: UserRole;
+  active?: boolean;
+}
+
+/**
+ * User data structure
+ */
+export interface User {
+  id: string;
+  email: string;
+  firstName: string;
+  lastName: string;
+  fullName: string;
+  roles: string[];
+  active: boolean;
+}
+
+/**
  * Helper methods for common HTTP methods
  */
 export const api = {
@@ -133,4 +172,31 @@ export const api = {
   
   delete: <T>(endpoint: string, options?: RequestInit) =>
     fetchApi<T>(endpoint, { ...options, method: 'DELETE' }),
+}; 
+
+/**
+ * Users API endpoints
+ */
+export const usersApi = {
+  /**
+   * Get users with filtering and pagination
+   * Requires admin or planner role
+   */
+  getUsers: (params?: UserListParams): Promise<PaginatedResponse<User>> => {
+    // Convert params to URL query string
+    const queryParams = new URLSearchParams();
+    
+    if (params) {
+      Object.entries(params).forEach(([key, value]) => {
+        if (value !== undefined) {
+          queryParams.append(key, String(value));
+        }
+      });
+    }
+    
+    const queryString = queryParams.toString();
+    const endpoint = `/users${queryString ? `?${queryString}` : ''}`;
+    
+    return api.get<PaginatedResponse<User>>(endpoint);
+  }
 }; 
