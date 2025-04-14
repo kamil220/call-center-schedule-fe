@@ -4,6 +4,7 @@ import { User, UserRole } from '@/types/user';
 import { authService } from '@/services/auth.service';
 import { getUserFromCookies, getTokenFromCookies } from '@/lib/cookies';
 import { setLogoutHandler } from '@/services/api';
+import { LoginRequestDto } from '@/types/api/auth';
 
 // Define the state interface
 interface AuthState {
@@ -41,7 +42,8 @@ export const useAuthStore = create<AuthState>()(
           set({ isLoading: true, error: null });
           
           try {
-            const result = await authService.login({ email, password });
+            const credentials: LoginRequestDto = { email, password };
+            const result = await authService.login(credentials);
             
             if (result.success && result.user) {
               set({

@@ -1,4 +1,4 @@
-import { User, UserRole, UserStatus } from '@/types/user';
+import { User } from '@/types/user';
 import { 
   setAuthCookies, 
   clearAuthCookies, 
@@ -6,30 +6,10 @@ import {
   getTokenFromCookies 
 } from '@/lib/cookies';
 import { api, ApiError } from './api';
+import { LoginRequestDto, LoginResponseDto, UserDto } from '@/types/api/auth';
+import { mapApiUserToUser } from '@/types/mappers';
 
-// Types
-export interface LoginCredentials {
-  email: string;
-  password: string;
-  [key: string]: unknown;
-}
-
-// API response types
-interface ApiUser {
-  id: string;
-  email: string;
-  firstName: string;
-  lastName: string;
-  fullName: string;
-  roles: string[];
-  active: boolean;
-}
-
-interface ApiLoginResponse {
-  token: string;
-  user: ApiUser;
-}
-
+// Custom response type for login
 export interface LoginResponse {
   success: boolean;
   user?: User;
@@ -38,44 +18,20 @@ export interface LoginResponse {
 }
 
 /**
- * Maps API roles to application UserRole enum
- */
-function mapApiRoleToUserRole(apiRoles: string[]): UserRole {
-  if (apiRoles.includes('ROLE_ADMIN')) {
-    return UserRole.ADMIN;
-  } else if (apiRoles.includes('ROLE_PLANNER')) {
-    return UserRole.PLANNER;
-  } else if (apiRoles.includes('ROLE_TEAM_MANAGER')) {
-    return UserRole.TEAM_MANAGER;
-  } else {
-    return UserRole.AGENT;
-  }
-}
-
-/**
  * Authentication service
  * 
  * Handles user authentication operations (login, logout, session management)
- * Currently uses mock implementations, but prepared for real API integration
  */
 class AuthService {
   /**
    * Login user
    */
-  async login(credentials: LoginCredentials): Promise<LoginResponse> {
+  async login(credentials: LoginRequestDto): Promise<LoginResponse> {
     try {
-      const response = await api.post<ApiLoginResponse>('/auth/login', credentials);
+      const response = await api.post<LoginResponseDto>('/auth/login', credentials);
       
       // Map API user to our application User type
-      const user: User = {
-        id: response.user.id,
-        email: response.user.email,
-        role: mapApiRoleToUserRole(response.user.roles),
-        status: response.user.active ? UserStatus.ACTIVE : UserStatus.INACTIVE,
-        firstName: response.user.firstName,
-        lastName: response.user.lastName,
-        fullName: response.user.fullName,
-      };
+      const user = mapApiUserToUser(response.user);
       
       // Save the token and user info
       setAuthCookies(response.token, user);
@@ -107,8 +63,6 @@ class AuthService {
 
   /**
    * Logout user
-   * 
-   * When real API is ready, implement token invalidation if needed
    */
   async logout(): Promise<void> {
     // Clear auth cookies
@@ -128,20 +82,10 @@ class AuthService {
         return null;
       }
 
-      const response = await api.get<ApiUser>('/auth/me');
+      const response = await api.get<UserDto>('/auth/me');
       
       // Map API user to our application User type
-      const user: User = {
-        id: response.id,
-        email: response.email,
-        role: mapApiRoleToUserRole(response.roles),
-        status: response.active ? UserStatus.ACTIVE : UserStatus.INACTIVE,
-        firstName: response.firstName,
-        lastName: response.lastName,
-        fullName: response.fullName,
-      };
-      
-      return user;
+      return mapApiUserToUser(response);
     } catch (error) {
       if (error instanceof ApiError && error.status === 401) {
         // Clear cookies if the session is invalid
