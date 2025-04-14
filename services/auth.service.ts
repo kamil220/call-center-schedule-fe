@@ -5,7 +5,8 @@ import {
   getUserFromCookies, 
   getTokenFromCookies 
 } from '@/lib/cookies';
-import { api, ApiError } from './api';
+import { api } from './api';
+import { ApiError } from '../types/api.type';
 import { LoginRequestDto, LoginResponseDto, UserDto } from '@/types/api/auth';
 import { mapApiUserToUser } from '@/types/mappers';
 

@@ -148,4 +148,4 @@ export const usersApi = {
     
     return api.get<PaginatedResponse<User>>(endpoint);
   }
-}; 
+};
