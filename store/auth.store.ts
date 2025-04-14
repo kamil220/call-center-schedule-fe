@@ -3,6 +3,7 @@ import { devtools, persist } from 'zustand/middleware';
 import { User, UserRole } from '@/types/user';
 import { authService } from '@/services/auth.service';
 import { getUserFromCookies, getTokenFromCookies } from '@/lib/cookies';
+import { setLogoutHandler } from '@/services/api';
 
 // Define the state interface
 interface AuthState {
@@ -19,6 +20,8 @@ interface AuthState {
   hasRole: (role: UserRole) => boolean;
   // Sync with cookies
   syncWithCookies: () => void;
+  // Fetch current user data
+  fetchCurrentUser: () => Promise<void>;
 }
 
 export const useAuthStore = create<AuthState>()(
@@ -122,6 +125,34 @@ export const useAuthStore = create<AuthState>()(
             });
           }
         },
+
+        // Fetch current user data
+        fetchCurrentUser: async () => {
+          set({ isLoading: true });
+          
+          try {
+            const user = await authService.getCurrentUser();
+            if (user) {
+              set({
+                user,
+                isAuthenticated: true,
+                isLoading: false,
+              });
+            } else {
+              set({
+                user: null,
+                isAuthenticated: false,
+                isLoading: false,
+                error: null,
+              });
+            }
+          } catch (error) {
+            set({
+              error: 'An unexpected error occurred: ' + error,
+              isLoading: false,
+            });
+          }
+        },
       }),
       { name: 'auth-store' } // Name for Redux DevTools
     ),
@@ -172,4 +203,20 @@ export const useAuthActions = () => useAuthStore((state) => ({
   logout: state.logout,
   clearError: state.clearError,
   syncWithCookies: state.syncWithCookies,
-})); 
+  fetchCurrentUser: state.fetchCurrentUser,
+}));
+
+// Set the API logout handler to use our store's logout function
+// Do this after store initialization
+const initLogoutHandler = () => {
+  // Get the state directly from the store
+  const logout = useAuthStore.getState().logout;
+  
+  // Set the handler in the API
+  setLogoutHandler(() => {
+    logout();
+  });
+};
+
+// Initialize right away
+initLogoutHandler(); 

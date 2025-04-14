@@ -92,6 +92,9 @@ export interface User {
   email: string;
   role: UserRole;
   status: UserStatus;
+  firstName?: string;
+  lastName?: string;
+  fullName?: string;
   // Add other fields like name, avatarUrl etc. as needed
 }
 

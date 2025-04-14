@@ -1,16 +1,33 @@
-import { User, UserRole } from '@/types/user';
+import { User, UserRole, UserStatus } from '@/types/user';
 import { 
   setAuthCookies, 
   clearAuthCookies, 
   getUserFromCookies, 
   getTokenFromCookies 
 } from '@/lib/cookies';
-// import { api } from './api';
+import { api, ApiError } from './api';
 
 // Types
 export interface LoginCredentials {
   email: string;
   password: string;
+  [key: string]: unknown;
+}
+
+// API response types
+interface ApiUser {
+  id: string;
+  email: string;
+  firstName: string;
+  lastName: string;
+  fullName: string;
+  roles: string[];
+  active: boolean;
+}
+
+interface ApiLoginResponse {
+  token: string;
+  user: ApiUser;
 }
 
 export interface LoginResponse {
@@ -18,6 +35,21 @@ export interface LoginResponse {
   user?: User;
   error?: string;
   token?: string;
+}
+
+/**
+ * Maps API roles to application UserRole enum
+ */
+function mapApiRoleToUserRole(apiRoles: string[]): UserRole {
+  if (apiRoles.includes('ROLE_ADMIN')) {
+    return UserRole.ADMIN;
+  } else if (apiRoles.includes('ROLE_PLANNER')) {
+    return UserRole.PLANNER;
+  } else if (apiRoles.includes('ROLE_TEAM_MANAGER')) {
+    return UserRole.TEAM_MANAGER;
+  } else {
+    return UserRole.AGENT;
+  }
 }
 
 /**
@@ -29,68 +61,48 @@ export interface LoginResponse {
 class AuthService {
   /**
    * Login user
-   * 
-   * When real API is ready, uncomment the api.post call and remove the mock implementation
    */
   async login(credentials: LoginCredentials): Promise<LoginResponse> {
-    
-    // Simulate network delay (remove in production)
-    await new Promise((resolve) => setTimeout(resolve, 500));
-
-    // MOCK IMPLEMENTATION - Replace with real API call when backend is ready
-    // --------------------------------------------------------
-    if (credentials.email === 'admin@email.com' && credentials.password === 'admin') {
-      const mockAdminUser: User = {
-        id: 'mock-admin-id',
-        email: 'admin@email.com',
-        role: UserRole.ADMIN,
+    try {
+      const response = await api.post<ApiLoginResponse>('/auth/login', credentials);
+      
+      // Map API user to our application User type
+      const user: User = {
+        id: response.user.id,
+        email: response.user.email,
+        role: mapApiRoleToUserRole(response.user.roles),
+        status: response.user.active ? UserStatus.ACTIVE : UserStatus.INACTIVE,
+        firstName: response.user.firstName,
+        lastName: response.user.lastName,
+        fullName: response.user.fullName,
       };
       
-      // Set auth cookies
-      const token = 'mock-admin-token';
+      // Save the token and user info
+      setAuthCookies(response.token, user);
       
-      setAuthCookies(token, mockAdminUser);
-
-      return { success: true, user: mockAdminUser, token };
-    } else if (credentials.password === 'password') {
-      // Simulate a generic user login for demo purposes
-      const mockAgentUser: User = {
-        id: `mock-agent-${Math.random().toString(36).substring(7)}`,
-        email: credentials.email,
-        role: UserRole.AGENT,
+      return { 
+        success: true, 
+        user, 
+        token: response.token 
       };
-      
-      // Set auth cookies
-      const token = 'mock-agent-token';
-      
-      setAuthCookies(token, mockAgentUser);
-      
-      return { success: true, user: mockAgentUser, token };
+    } catch (error) {
+      // Handle specific API errors appropriately
+      if (error instanceof ApiError) {
+        if (error.status === 401) {
+          return {
+            success: false,
+            error: 'Invalid email or password'
+          };
+        }
+        return {
+          success: false,
+          error: typeof error.data === 'object' && error.data && 'message' in error.data 
+            ? String(error.data.message) 
+            : 'Login failed. Please try again.'
+        };
+      }
+      return { success: false, error: 'An unexpected error occurred' };
     }
-    
-    return { success: false, error: 'Invalid email or password' };
-    // --------------------------------------------------------
-
-    // REAL IMPLEMENTATION - Uncomment when backend is ready
-    // try {
-    //   const response = await api.post<LoginResponse>('/auth/login', credentials);
-    //   
-    //   // If login successful, set auth cookies
-    //   if (response.success && response.user && response.token) {
-    //     setAuthCookies(response.token, response.user);
-    //   }
-    //   
-    //   return response;
-    // } catch (error) {
-    //   // Handle specific API errors appropriately
-    //   if (error instanceof ApiError) {
-    //     return {
-    //       success: false,
-    //       error: error.data?.message || 'Login failed. Please try again.'
-    //     };
-    //   }
-    //   return { success: false, error: 'An unexpected error occurred' };
-    // }
   }
 
   /**
@@ -101,19 +113,42 @@ class AuthService {
   async logout(): Promise<void> {
     // Clear auth cookies
     clearAuthCookies();
-    
-    // REAL IMPLEMENTATION - Uncomment when backend is ready
-    // try {
-    //   await api.post('/auth/logout');
-    //   clearAuthCookies();
-    // } catch (error) {
-    //   console.error('Error during logout:', error);
-    //   // Still clear cookies on client-side even if API call fails
-    //   clearAuthCookies();
-    // }
-    
+        
     // For now, just simulate a delay
     await new Promise((resolve) => setTimeout(resolve, 100));
+  }
+
+  /**
+   * Get information about the current logged-in user
+   */
+  async getCurrentUser(): Promise<User | null> {
+    try {
+      const token = getTokenFromCookies();
+      if (!token) {
+        return null;
+      }
+
+      const response = await api.get<ApiUser>('/auth/me');
+      
+      // Map API user to our application User type
+      const user: User = {
+        id: response.id,
+        email: response.email,
+        role: mapApiRoleToUserRole(response.roles),
+        status: response.active ? UserStatus.ACTIVE : UserStatus.INACTIVE,
+        firstName: response.firstName,
+        lastName: response.lastName,
+        fullName: response.fullName,
+      };
+      
+      return user;
+    } catch (error) {
+      if (error instanceof ApiError && error.status === 401) {
+        // Clear cookies if the session is invalid
+        clearAuthCookies();
+      }
+      return null;
+    }
   }
 
   /**
@@ -130,15 +165,6 @@ class AuthService {
       return { user: cookieUser };
     }
     
-    // REAL IMPLEMENTATION - Uncomment when backend is ready
-    // try {
-    //   const response = await api.get<{ user: User }>('/auth/session');
-    //   return response;
-    // } catch (error) {
-    //   return { user: null };
-    // }
-    
-    // For now, just return null (session will be managed by frontend storage)
     return { user: null };
   }
 }

@@ -6,6 +6,7 @@
  */
 
 import { getTokenFromCookies } from '@/lib/cookies';
+import { clearAuthCookies } from '@/lib/cookies';
 
 // Constants
 const API_BASE_URL = '/api';
@@ -24,6 +25,18 @@ export class ApiError extends Error {
     this.data = data;
   }
 }
+
+// Handle unauthorized error (401)
+// Using a function so we can import this before the store is initialized
+let handleLogout: () => void = () => {
+  clearAuthCookies();
+  // We'll set this function after store initialization
+};
+
+// Function to set the logout handler from the auth store
+export const setLogoutHandler = (fn: () => void) => {
+  handleLogout = fn;
+};
 
 /**
  * Base fetch wrapper with error handling and automatic JSON parsing
@@ -63,6 +76,12 @@ export async function fetchApi<T>(
 
     // Handle error responses
     if (!response.ok) {
+      // Handle 401 errors - unauthorized (token expired or invalid)
+      if (response.status === 401) {
+        // Clear auth cookies and trigger logout
+        handleLogout();
+      }
+      
       throw new ApiError(
         data.message || 'An error occurred while fetching data',
         response.status,
