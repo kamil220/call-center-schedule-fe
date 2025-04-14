@@ -25,6 +25,18 @@ export type SpecializationTag =
 // Rating scale (1-5)
 export type Rating = 1 | 2 | 3 | 4 | 5;
 
+// Schedule day types
+export type ScheduleDayType = 'work' | 'vacation' | 'sick';
+
+// Schedule day structure
+export interface ScheduleDay {
+  type: ScheduleDayType;
+  shift?: string;
+  hours?: string;
+  specializations?: string[];
+  reason?: string;
+}
+
 // Efficiency details structure
 export interface EfficiencyDetails {
   overall: Rating;
@@ -96,7 +108,7 @@ export interface Employee extends ExtendedUser {
   efficiency: EfficiencyDetails;
   workload: number; // Percentage 0-100
   comments: EmployeeComment[];
-  schedule?: Record<string, string>; // Date -> Shift information
+  schedule?: Record<string, ScheduleDay>; // Date -> Schedule day information
   // Additional fields for employee profile
   avatar?: string;
   phoneNumber?: string;

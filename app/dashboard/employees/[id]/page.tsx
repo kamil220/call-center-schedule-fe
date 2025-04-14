@@ -17,7 +17,8 @@ import {
   UserStatus,
   Rating, 
   EfficiencyDetails as EfficiencyDetailsType,
-  EmployeeComment
+  EmployeeComment,
+  ScheduleDay
 } from "@/types/user";
 import { Badge } from "@/components/ui/badge";
 import { Calendar } from "@/components/ui/calendar";
@@ -31,27 +32,63 @@ import {
   Phone as AlertPhone,
   Star,
   User,
-  LineChart
+  LineChart,
+  Briefcase,
+  Clock,
+  PlaneTakeoff,
+  Thermometer
 } from "lucide-react";
 import { Textarea } from "@/components/ui/textarea";
 import { format } from "date-fns";
 import { Label } from "@/components/ui/label";
 import { RequireRole } from "@/components/require-role";
+import {
+  HoverCard,
+  HoverCardContent,
+  HoverCardTrigger,
+} from "@/components/ui/hover-card";
 
-// Generate mock schedule data
+// Generate mock schedule data with vacations and sick leaves
 const generateMockSchedule = () => {
   const today = new Date();
-  const schedule: Record<string, string> = {};
+  const schedule: Record<string, ScheduleDay> = {};
   
   // Add shifts for next 30 days
   for (let i = 0; i < 30; i++) {
     const date = new Date();
     date.setDate(today.getDate() + i);
+    const dateKey = format(date, 'yyyy-MM-dd');
     
-    if (Math.random() > 0.3) { // 70% chance to have a shift
-      const shift = Math.random() > 0.5 ? "Morning (8-16)" : "Evening (14-22)";
-      schedule[format(date, 'yyyy-MM-dd')] = shift;
+    // 70% chance to have a shift, 15% vacation, 5% sick leave, 10% day off
+    const random = Math.random();
+    
+    if (random < 0.7) { // Work day
+      const isAfternoon = Math.random() > 0.5;
+      const shift = isAfternoon ? "Afternoon" : "Morning";
+      const hours = isAfternoon ? "14:00-22:00" : "06:00-14:00";
+      
+      // Random specializations
+      const allSpecializations = ["Customer Support", "Technical Support", "Sales", "Onboarding"];
+      const specializations = [allSpecializations[Math.floor(Math.random() * allSpecializations.length)]];
+      
+      schedule[dateKey] = {
+        type: 'work',
+        shift,
+        hours,
+        specializations
+      };
+    } else if (random < 0.85) { // Vacation
+      schedule[dateKey] = {
+        type: 'vacation',
+        reason: "Annual leave"
+      };
+    } else if (random < 0.9) { // Sick leave
+      schedule[dateKey] = {
+        type: 'sick',
+        reason: "Medical leave"
+      };
     }
+    // Otherwise it's a day off (no entry in schedule)
   }
   
   return schedule;
@@ -307,9 +344,9 @@ interface CalendarDayProps {
 }
 
 // Employee Schedule display
-const ScheduleCalendar = ({ schedule }: { schedule: Record<string, string> }) => {
+const ScheduleCalendar = ({ schedule }: { schedule: Record<string, ScheduleDay> }) => {
   const [date, setDate] = useState<Date | undefined>(new Date());
-  const [selectedDayShift, setSelectedDayShift] = useState<string | null>(null);
+  const [selectedDayShift, setSelectedDayShift] = useState<ScheduleDay | null>(null);
   
   useEffect(() => {
     if (date) {
@@ -332,23 +369,96 @@ const ScheduleCalendar = ({ schedule }: { schedule: Record<string, string> }) =>
           components={{
             Day: (props: CalendarDayProps) => {
               const dateKey = format(props.date, 'yyyy-MM-dd');
-              const hasShift = schedule[dateKey];
+              const dayData = schedule[dateKey];
+              const today = new Date();
+              const isToday = 
+                props.date.getDate() === today.getDate() &&
+                props.date.getMonth() === today.getMonth() &&
+                props.date.getFullYear() === today.getFullYear();
+              
+              // Check if day is from current month
+              const isFromCurrentMonth = props.date.getMonth() === today.getMonth();
+              
+              // Day styling based on schedule type
+              let dayClassName = "";
+              let dayIcon = null;
+              
+              if (dayData) {
+                if (dayData.type === 'work') {
+                  dayClassName = "bg-blue-50 dark:bg-blue-950/20";
+                } else if (dayData.type === 'vacation') {
+                  dayClassName = "bg-amber-50 dark:bg-amber-950/20";
+                  dayIcon = <PlaneTakeoff className="absolute top-1 right-1 h-3 w-3 text-amber-500" />;
+                } else if (dayData.type === 'sick') {
+                  dayClassName = "bg-red-50 dark:bg-red-950/20";
+                  dayIcon = <Thermometer className="absolute top-1 right-1 h-3 w-3 text-red-500" />;
+                }
+              }
+              
               return (
-                <div 
-                  onClick={() => props.onClick?.()}
-                  className={`
-                    relative p-3 cursor-pointer flex items-center justify-center
-                    ${props.selected ? 'bg-primary text-primary-foreground hover:bg-primary hover:text-primary-foreground focus:bg-primary focus:text-primary-foreground' : ''}
-                    ${props.today ? 'border border-primary' : ''}
-                  `}
-                >
-                  <time dateTime={format(props.date, 'yyyy-MM-dd')}>
-                    {format(props.date, 'd')}
-                  </time>
-                  {hasShift && (
-                    <div className={`absolute bottom-1 w-1 h-1 rounded-full ${props.selected ? 'bg-primary-foreground' : 'bg-primary'}`}></div>
+                <HoverCard>
+                  <HoverCardTrigger asChild>
+                    <div 
+                      onClick={() => props.onClick?.()}
+                      className={`
+                        relative p-3 cursor-pointer flex items-center justify-center rounded-sm
+                        ${props.selected ? 'bg-primary text-primary-foreground hover:bg-primary hover:text-primary-foreground' : ''}
+                        ${isToday ? 'border border-primary/50' : ''}
+                        ${!props.selected && dayClassName}
+                        ${!isFromCurrentMonth ? 'text-muted-foreground opacity-50' : ''}
+                      `}
+                    >
+                      <time dateTime={format(props.date, 'yyyy-MM-dd')}>
+                        {format(props.date, 'd')}
+                      </time>
+                      {dayIcon}
+                    </div>
+                  </HoverCardTrigger>
+                  {dayData && (
+                    <HoverCardContent className="w-80 p-4">
+                      <div className="flex justify-between items-start">
+                        <div>
+                          <h4 className="text-sm font-semibold">{format(props.date, 'EEEE, MMMM d, yyyy')}</h4>
+                          {dayData.type === 'work' ? (
+                            <div className="mt-2 space-y-2">
+                              <div className="flex items-center">
+                                <Clock className="h-4 w-4 mr-2 text-muted-foreground" />
+                                <span>{dayData.hours}</span>
+                              </div>
+                              <div className="flex items-center">
+                                <Briefcase className="h-4 w-4 mr-2 text-muted-foreground" />
+                                <span>Shift: {dayData.shift}</span>
+                              </div>
+                              <div>
+                                <p className="text-xs text-muted-foreground mb-1">Specializations:</p>
+                                <div className="flex flex-wrap gap-1">
+                                  {dayData.specializations?.map((spec, i) => (
+                                    <Badge key={i} variant="secondary" className="text-xs">
+                                      {spec}
+                                    </Badge>
+                                  ))}
+                                </div>
+                              </div>
+                            </div>
+                          ) : (
+                            <div className="mt-2">
+                              <Badge 
+                                variant={dayData.type === 'vacation' ? "outline" : "destructive"}
+                                className={`
+                                  ${dayData.type === 'vacation' ? 'text-amber-500 border-amber-200' : ''}
+                                  ${dayData.type === 'sick' ? 'bg-red-100 text-red-500 border-none' : ''}
+                                `}
+                              >
+                                {dayData.type === 'vacation' ? 'Vacation' : 'Sick Leave'}
+                              </Badge>
+                              <p className="mt-2 text-sm">{dayData.reason}</p>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    </HoverCardContent>
                   )}
-                </div>
+                </HoverCard>
               );
             }
           }}
@@ -360,7 +470,11 @@ const ScheduleCalendar = ({ schedule }: { schedule: Record<string, string> }) =>
             <CardTitle className="text-lg">{date ? format(date, 'EEEE, MMM d, yyyy') : '-'}</CardTitle>
             <CardDescription>
               {selectedDayShift 
-                ? `Scheduled shift: ${selectedDayShift}` 
+                ? (selectedDayShift.type === 'work'
+                    ? `Scheduled shift: ${selectedDayShift.shift} (${selectedDayShift.hours})`
+                    : selectedDayShift.type === 'vacation'
+                    ? 'Vacation day'
+                    : 'Sick leave')
                 : 'No shift scheduled for this day'}
             </CardDescription>
           </CardHeader>
@@ -373,14 +487,21 @@ const ScheduleCalendar = ({ schedule }: { schedule: Record<string, string> }) =>
           <CardContent>
             <div className="space-y-2">
               <div className="flex justify-between">
-                <span>Total shifts this month:</span>
-                <span className="font-medium">{Object.keys(schedule).length}</span>
+                <span>Working days this month:</span>
+                <span className="font-medium">
+                  {Object.values(schedule).filter(day => day.type === 'work').length}
+                </span>
               </div>
               <div className="flex justify-between">
-                <span>Upcoming shifts:</span>
+                <span>Vacation days:</span>
                 <span className="font-medium">
-                  {Object.entries(schedule).filter(([date]) => 
-                    new Date(date) >= new Date()).length}
+                  {Object.values(schedule).filter(day => day.type === 'vacation').length}
+                </span>
+              </div>
+              <div className="flex justify-between">
+                <span>Sick leave days:</span>
+                <span className="font-medium">
+                  {Object.values(schedule).filter(day => day.type === 'sick').length}
                 </span>
               </div>
             </div>
