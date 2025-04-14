@@ -5,27 +5,22 @@ import { useRouter } from 'next/navigation';
 import { UserRole } from '@/types/user';
 import { useHasRole, useUser } from '@/store/auth.store';
 
-interface RoleGuardProps {
+interface RequireRoleProps {
   children: ReactNode;
   requiredRole: UserRole;
-  fallback?: ReactNode;
 }
 
 /**
- * RoleGuard component only checks for role permissions
- * It assumes the user is already authenticated (handled by ProtectedRoute)
+ * Component that ONLY checks for role permissions
+ * Does not handle authentication or cookie syncing - assumes that is handled by parent ProtectedRoute
  */
-export function RoleGuard({ 
-  children, 
-  requiredRole, 
-  fallback 
-}: RoleGuardProps) {
+export function RequireRole({ children, requiredRole }: RequireRoleProps) {
   const hasRequiredRole = useHasRole(requiredRole);
   const user = useUser();
   const router = useRouter();
 
   useEffect(() => {
-    console.log('RoleGuard [DEBUG]:', { 
+    console.log('RequireRole [DEBUG]:', { 
       hasRequiredRole,
       requiredRole,
       userRole: user?.role
@@ -33,17 +28,17 @@ export function RoleGuard({
 
     // If user doesn't have required role, redirect to forbidden page
     if (!hasRequiredRole) {
-      console.log('RoleGuard [DEBUG]: User lacks required role, redirecting to forbidden');
+      console.log('RequireRole [DEBUG]: User lacks required role, redirecting to forbidden');
       router.push('/forbidden');
     } else {
-      console.log('RoleGuard [DEBUG]: User has required role, rendering children');
+      console.log('RequireRole [DEBUG]: User has required role, rendering children');
     }
   }, [hasRequiredRole, router, requiredRole, user?.role]);
 
-  // If doesn't have the role, show fallback or nothing while redirecting
+  // If doesn't have the role, render nothing while redirecting
   if (!hasRequiredRole) {
-    console.log('RoleGuard [DEBUG]: Not showing content, waiting for redirect');
-    return fallback || null;
+    console.log('RequireRole [DEBUG]: Not showing content, waiting for redirect');
+    return null;
   }
 
   // Render children when user has required role

@@ -68,16 +68,18 @@ export const useAuthStore = create<AuthState>()(
           set({ isLoading: true });
           
           try {
+            // This already clears cookies internally
             await authService.logout();
+            // Update the store state
             set({
               user: null,
               isAuthenticated: false,
               isLoading: false,
             });
             
-            // Additional side effects could be handled here
-            // e.g., redirecting the user
+            console.log('Auth Store [DEBUG] logout: Successfully logged out, cookies and store state cleared');
           } catch (error) {
+            console.error('Auth Store [DEBUG] logout: Error during logout:', error);
             set({
               error: 'Error during logout: ' + error,
               isLoading: false,
@@ -91,7 +93,10 @@ export const useAuthStore = create<AuthState>()(
         // Helper to check if user has a specific role or higher
         hasRole: (role: UserRole) => {
           const { user } = get();
-          if (!user) return false;
+          if (!user) {
+            console.log('Auth Store [DEBUG] hasRole: No user, returning false');
+            return false;
+          }
 
           const roleHierarchy = {
             [UserRole.AGENT]: 1,
@@ -100,7 +105,13 @@ export const useAuthStore = create<AuthState>()(
             [UserRole.ADMIN]: 4
           };
 
-          return roleHierarchy[user.role] >= roleHierarchy[role];
+          const hasRole = roleHierarchy[user.role] >= roleHierarchy[role];
+          console.log('Auth Store [DEBUG] hasRole:', { 
+            userRole: user.role, 
+            requiredRole: role, 
+            hasRole 
+          });
+          return hasRole;
         },
         
         // Sync store with cookies
@@ -109,13 +120,25 @@ export const useAuthStore = create<AuthState>()(
           const user = getUserFromCookies();
           const token = getTokenFromCookies();
           
+          console.log('Auth Store [DEBUG] syncWithCookies:', { 
+            hasCookieUser: !!user, 
+            hasCookieToken: !!token 
+          });
+          
           if (user && token) {
             // Update store with cookie data if available
+            console.log('Auth Store [DEBUG] syncWithCookies: Setting user from cookies', { 
+              userEmail: user.email, 
+              userRole: user.role 
+            });
+            
             set({
               user,
               isAuthenticated: true,
               isLoading: false,
             });
+          } else {
+            console.log('Auth Store [DEBUG] syncWithCookies: No valid cookies found');
           }
         },
       }),

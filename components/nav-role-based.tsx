@@ -1,6 +1,5 @@
 import * as React from "react"
 import {
-  IconBuildingSkyscraper,
   IconCalendarTime,
   IconChartAreaLine,
   IconDashboard,
@@ -82,8 +81,8 @@ export function NavRoleBased() {
   const adminMenuItems = [
     {
       title: "Użytkownicy",
-      url: "/users",
-      icon: IconBuildingSkyscraper,
+      url: "/dashboard/users",
+      icon: IconUsers,
     },
     {
       title: "Logi systemowe",

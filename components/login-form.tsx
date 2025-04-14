@@ -8,7 +8,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useLoginForm } from '@/hooks/use-login-form';
 import { Loader2 } from 'lucide-react';
-import { useAuthActions } from '@/store/auth.store';
+import { useUser, useAuthStore } from '@/store/auth.store';
 import { clearAuthCookies } from '@/lib/cookies';
 
 export function LoginForm() {
@@ -23,23 +23,38 @@ export function LoginForm() {
     handleSubmit,
   } = useLoginForm();
 
-  const { syncWithCookies } = useAuthActions();
+  const user = useUser();
   const router = useRouter();
+  // Direct access to reset the store
+  const resetAuthState = useAuthStore(state => state.logout);
 
-  // When component mounts, clear auth cookies to ensure clean login state
-  // and sync with cookies in case a valid session exists
+  // When component mounts, clear auth cookies AND reset Zustand state
   useEffect(() => {
-    clearAuthCookies();
-    syncWithCookies();
-  }, [syncWithCookies]);
+    const resetAuth = async () => {
+      console.log('Login Form [DEBUG]: Clearing cookies and resetting auth state');
+      // Clear cookies first
+      clearAuthCookies();
+      // Then reset store state via logout
+      await resetAuthState();
+    };
+    
+    resetAuth();
+  }, [resetAuthState]);
 
   useEffect(() => {
+    console.log('Login Form [DEBUG]:', { 
+      isAuthenticated, 
+      userRole: user?.role 
+    });
+    
     if (isAuthenticated) {
+      console.log('Login Form [DEBUG]: Authenticated, redirecting to dashboard');
       router.push('/dashboard');
     }
-  }, [isAuthenticated, router]);
+  }, [isAuthenticated, router, user]);
 
   if (isAuthenticated) {
+    console.log('Login Form [DEBUG]: Already authenticated, showing loader during redirect');
     return (
       <div className="flex items-center justify-center min-h-screen">
         <Loader2 className="h-8 w-8 animate-spin text-primary" />
