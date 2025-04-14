@@ -1,6 +1,6 @@
 import { create } from 'zustand';
 import { devtools, persist } from 'zustand/middleware';
-import { User } from '@/types/user';
+import { User, UserRole } from '@/types/user';
 import { authService } from '@/services/auth.service';
 
 // Define the state interface
@@ -14,6 +14,8 @@ interface AuthState {
   login: (email: string, password: string) => Promise<void>;
   logout: () => Promise<void>;
   clearError: () => void;
+  // Helper for role checking
+  hasRole: (role: UserRole) => boolean;
 }
 
 export const useAuthStore = create<AuthState>()(
@@ -21,7 +23,7 @@ export const useAuthStore = create<AuthState>()(
   persist(
     // Add devtools middleware for debugging (shows up in Redux DevTools)
     devtools(
-      (set) => ({
+      (set, get) => ({
         // Initial state
         user: null,
         isAuthenticated: false,
@@ -82,6 +84,21 @@ export const useAuthStore = create<AuthState>()(
         
         // Helper to clear error state
         clearError: () => set({ error: null }),
+
+        // Helper to check if user has a specific role or higher
+        hasRole: (role: UserRole) => {
+          const { user } = get();
+          if (!user) return false;
+
+          const roleHierarchy = {
+            [UserRole.AGENT]: 1,
+            [UserRole.TEAM_MANAGER]: 2,
+            [UserRole.PLANNER]: 3,
+            [UserRole.ADMIN]: 4
+          };
+
+          return roleHierarchy[user.role] >= roleHierarchy[role];
+        },
       }),
       { name: 'auth-store' } // Name for Redux DevTools
     ),
@@ -122,6 +139,9 @@ export const useAuthStatus = () => useAuthStore((state) => ({
 
 // Example of a selector to get user
 export const useUser = () => useAuthStore((state) => state.user);
+
+// Check if user has a specific role
+export const useHasRole = (role: UserRole) => useAuthStore((state) => state.hasRole(role));
 
 // Example of action selector
 export const useAuthActions = () => useAuthStore((state) => ({
