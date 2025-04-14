@@ -26,6 +26,7 @@ export interface UserListParams extends PaginationParams<UserSortField> {
   firstName?: string;
   lastName?: string;
   email?: string;
+  name?: string;
   role?: UserRole;
   active?: boolean;
 }

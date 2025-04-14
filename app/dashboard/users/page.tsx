@@ -1,11 +1,16 @@
 'use client';
 
 import { UserRole, UserStatus, formatRoleName, formatStatus, ExtendedUser } from "@/types/user";
+import { User as ApiUser } from "@/types/user.type";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { PlusIcon, Users } from "lucide-react";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { RequireRole } from "@/components/require-role";
+import { usersApi } from "@/services/api";
+import { Loader2 } from "lucide-react";
+import { format } from "date-fns";
+import { Pagination } from "@/components/ui/pagination";
 
 // Data table imports
 import {
@@ -32,72 +37,18 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
-import { format } from "date-fns";
-
-// Mock user data for demonstration
-const mockUsers: ExtendedUser[] = [
-  { 
-    id: '1', 
-    name: 'John Admin', 
-    email: 'admin@email.com', 
-    role: UserRole.ADMIN,
-    status: UserStatus.ACTIVE,
-    hireDate: '2020-01-15',
-    manager: null
-  },
-  { 
-    id: '2', 
-    name: 'Sara Planner', 
-    email: 'planner@example.com', 
-    role: UserRole.PLANNER,
-    status: UserStatus.ACTIVE,
-    hireDate: '2021-03-22',
-    manager: '1' 
-  },
-  { 
-    id: '3', 
-    name: 'Mike Manager', 
-    email: 'manager@example.com', 
-    role: UserRole.TEAM_MANAGER,
-    status: UserStatus.ACTIVE,
-    hireDate: '2021-05-10',
-    manager: '1' 
-  },
-  { 
-    id: '4', 
-    name: 'Amy Agent', 
-    email: 'agent@example.com', 
-    role: UserRole.AGENT,
-    status: UserStatus.ACTIVE,
-    hireDate: '2022-01-05',
-    manager: '3' 
-  },
-  { 
-    id: '5', 
-    name: 'David Agent', 
-    email: 'david@example.com', 
-    role: UserRole.AGENT,
-    status: UserStatus.INACTIVE,
-    hireDate: '2022-02-15',
-    manager: '3' 
-  },
-  { 
-    id: '6', 
-    name: 'Emma Planner', 
-    email: 'emma@example.com', 
-    role: UserRole.PLANNER,
-    status: UserStatus.ACTIVE,
-    hireDate: '2021-11-08',
-    manager: '2' 
-  },
-];
 
 export default function UsersPage() {
   const [sorting, setSorting] = useState<SortingState>([]);
   const [columnFilters, setColumnFilters] = useState<ColumnFiltersState>([]);
   const [globalFilter, setGlobalFilter] = useState('');
-  const [users, setUsers] = useState<ExtendedUser[]>(mockUsers);
+  const [users, setUsers] = useState<ExtendedUser[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const [page, setPage] = useState(0);
+  const [pageSize, setPageSize] = useState(10);
+  const [totalPages, setTotalPages] = useState(1);
   
   // Form state for new user
   const [newUser, setNewUser] = useState<Partial<ExtendedUser>>({
@@ -108,34 +59,6 @@ export default function UsersPage() {
     hireDate: format(new Date(), 'yyyy-MM-dd'),
     manager: null
   });
-
-  // Function to add a new user
-  const handleAddUser = () => {
-    if (!newUser.name || !newUser.email) return;
-    
-    const user: ExtendedUser = {
-      id: Math.random().toString(36).substring(7), // Generate random ID
-      name: newUser.name,
-      email: newUser.email,
-      role: newUser.role || UserRole.AGENT,
-      status: newUser.status || UserStatus.ACTIVE,
-      hireDate: newUser.hireDate || format(new Date(), 'yyyy-MM-dd'),
-      manager: newUser.manager || null
-    };
-    
-    setUsers([...users, user]);
-    setIsDialogOpen(false);
-    
-    // Reset form
-    setNewUser({
-      name: '',
-      email: '',
-      role: UserRole.AGENT,
-      status: UserStatus.ACTIVE,
-      hireDate: format(new Date(), 'yyyy-MM-dd'),
-      manager: null
-    });
-  };
 
   // Define columns
   const columns: ColumnDef<ExtendedUser>[] = [
@@ -209,11 +132,7 @@ export default function UsersPage() {
     },
   ];
 
-  // Get unique managers for filter
-  const managers = users
-    .filter(user => user.role === UserRole.ADMIN || user.role === UserRole.TEAM_MANAGER)
-    .map(user => ({ id: user.id, name: user.name }));
-
+  // Initialize the table
   const table = useReactTable({
     data: users,
     columns,
@@ -224,12 +143,146 @@ export default function UsersPage() {
     onColumnFiltersChange: setColumnFilters,
     getFilteredRowModel: getFilteredRowModel(),
     onGlobalFilterChange: setGlobalFilter,
+    manualPagination: true,
+    pageCount: totalPages,
     state: {
       sorting,
       columnFilters,
       globalFilter,
+      pagination: {
+        pageIndex: page,
+        pageSize,
+      },
     },
   });
+  
+  // Function to fetch users
+  const fetchUsers = async () => {
+    setIsLoading(true);
+    setError(null);
+    try {
+      // Convert our UserRole enum to the API's UserRole string type
+      let apiRole: string | undefined;
+      const roleFilter = table.getColumn("role")?.getFilterValue() as UserRole | undefined;
+      
+      if (roleFilter) {
+        // Map from our internal enum to the API's string format
+        switch (roleFilter) {
+          case UserRole.ADMIN: apiRole = 'ROLE_ADMIN'; break;
+          case UserRole.AGENT: apiRole = 'ROLE_AGENT'; break;
+          case UserRole.PLANNER: apiRole = 'ROLE_PLANNER'; break;
+          case UserRole.TEAM_MANAGER: apiRole = 'ROLE_TEAM_MANAGER'; break;
+        }
+      }
+      
+      // Convert active/inactive status to boolean for API
+      let activeStatus: boolean | undefined;
+      const statusFilter = table.getColumn("status")?.getFilterValue() as UserStatus | undefined;
+      if (statusFilter !== undefined) {
+        activeStatus = statusFilter === UserStatus.ACTIVE;
+      }
+      
+      const response = await usersApi.getUsers({
+        page,
+        limit: pageSize, // renamed from pageSize to limit to match API
+        // Need to use type assertion here because the API role type doesn't match our enum
+        role: apiRole as any,
+        active: activeStatus,
+        // Używamy nowego parametru name do wyszukiwania globalnego
+        name: globalFilter || undefined,
+        // Usuwamy stare parametry, ponieważ backend obsługuje już to przez name
+        // email: globalFilter || undefined,
+        // firstName: globalFilter || undefined,
+        // lastName: globalFilter || undefined,
+      });
+      
+      // Map API user type to ExtendedUser type
+      const extendedUsers: ExtendedUser[] = response.items.map((apiUser: ApiUser) => {
+        // Convert API role format to our UserRole enum
+        let role = UserRole.AGENT; // Default
+        if (apiUser.roles && apiUser.roles.length > 0) {
+          if (apiUser.roles.includes('ROLE_ADMIN')) role = UserRole.ADMIN;
+          else if (apiUser.roles.includes('ROLE_PLANNER')) role = UserRole.PLANNER;
+          else if (apiUser.roles.includes('ROLE_TEAM_MANAGER')) role = UserRole.TEAM_MANAGER;
+        }
+        
+        return {
+          id: apiUser.id,
+          email: apiUser.email,
+          role,
+          status: apiUser.active ? UserStatus.ACTIVE : UserStatus.INACTIVE,
+          name: apiUser.fullName || `${apiUser.firstName || ''} ${apiUser.lastName || ''}`.trim(),
+          hireDate: format(new Date(), 'yyyy-MM-dd'), // Placeholder since API doesn't provide hireDate
+          manager: null, // Placeholder since API doesn't provide manager
+        };
+      });
+      
+      setUsers(extendedUsers);
+      setTotalPages(Math.ceil(response.total / pageSize));
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to fetch users');
+      console.error('Error fetching users:', err);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  // Fetch users on initial load and when filters change
+  useEffect(() => {
+    fetchUsers();
+  }, [page, globalFilter, columnFilters]);
+
+  // Function to add a new user
+  const handleAddUser = async () => {
+    if (!newUser.name || !newUser.email) return;
+    
+    try {
+      // In a real app, you would call an API endpoint to create the user
+      // For now, we'll just add it to the local state
+      const user: ExtendedUser = {
+        id: Math.random().toString(36).substring(7), // Generate random ID
+        name: newUser.name,
+        email: newUser.email,
+        role: newUser.role || UserRole.AGENT,
+        status: newUser.status || UserStatus.ACTIVE,
+        hireDate: newUser.hireDate || format(new Date(), 'yyyy-MM-dd'),
+        manager: newUser.manager || null
+      };
+      
+      setUsers([...users, user]);
+      setIsDialogOpen(false);
+      
+      // Reset form
+      setNewUser({
+        name: '',
+        email: '',
+        role: UserRole.AGENT,
+        status: UserStatus.ACTIVE,
+        hireDate: format(new Date(), 'yyyy-MM-dd'),
+        manager: null
+      });
+      
+      // Refresh users list
+      fetchUsers();
+    } catch (err) {
+      console.error('Error adding user:', err);
+    }
+  };
+
+  // Get unique managers for filter
+  const managers = users
+    .filter(user => user.role === UserRole.ADMIN || user.role === UserRole.TEAM_MANAGER)
+    .map(user => ({ id: user.id, name: user.name }));
+
+  // Handle page change
+  const handlePageChange = (newPage: number) => {
+    setPage(newPage);
+  };
+
+  // Handle page size change
+  const handlePageSizeChange = (newSize: number) => {
+    setPageSize(newSize);
+  };
 
   return (
     <RequireRole requiredRole={UserRole.ADMIN}>
@@ -363,7 +416,7 @@ export default function UsersPage() {
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
                 <Input
-                  placeholder="Search by name..."
+                  placeholder="Search by name or email..."
                   value={globalFilter}
                   onChange={(e) => setGlobalFilter(e.target.value)}
                   className="max-w-sm"
@@ -475,7 +528,22 @@ export default function UsersPage() {
                   ))}
                 </TableHeader>
                 <TableBody>
-                  {table.getRowModel().rows?.length ? (
+                  {isLoading ? (
+                    <TableRow>
+                      <TableCell colSpan={columns.length} className="h-24 text-center">
+                        <div className="flex justify-center items-center">
+                          <Loader2 className="h-6 w-6 animate-spin mr-2" />
+                          <span>Loading users...</span>
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  ) : error ? (
+                    <TableRow>
+                      <TableCell colSpan={columns.length} className="h-24 text-center text-red-500">
+                        {error}
+                      </TableCell>
+                    </TableRow>
+                  ) : table.getRowModel().rows?.length ? (
                     table.getRowModel().rows.map((row) => (
                       <TableRow
                         key={row.id}
@@ -505,24 +573,15 @@ export default function UsersPage() {
               </Table>
             </div>
 
-            <div className="flex items-center justify-end space-x-2">
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => table.previousPage()}
-                disabled={!table.getCanPreviousPage()}
-              >
-                Previous
-              </Button>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => table.nextPage()}
-                disabled={!table.getCanNextPage()}
-              >
-                Next
-              </Button>
-            </div>
+            <Pagination 
+              page={page}
+              totalPages={totalPages}
+              onPageChange={handlePageChange}
+              isLoading={isLoading}
+              showPageSizeOptions
+              pageSize={pageSize}
+              onPageSizeChange={handlePageSizeChange}
+            />
           </div>
         </Card>
       </div>
