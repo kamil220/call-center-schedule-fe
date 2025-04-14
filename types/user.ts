@@ -12,6 +12,35 @@ export enum UserStatus {
   INACTIVE = 'INACTIVE',
 }
 
+// Available specialization tags for employees
+export type SpecializationTag = 
+  | 'Sales' 
+  | 'Technical Support' 
+  | 'Customer Service' 
+  | 'Administration' 
+  | 'HR' 
+  | 'IT' 
+  | 'Management';
+
+// Rating scale (1-5)
+export type Rating = 1 | 2 | 3 | 4 | 5;
+
+// Efficiency details structure
+export interface EfficiencyDetails {
+  overall: Rating;
+  workSpeed: Rating;
+  confidence: Rating;
+  knowledge: Rating;
+}
+
+// Employee comment structure
+export interface EmployeeComment {
+  id: string;
+  authorId: string;
+  date: string; // ISO date
+  content: string;
+}
+
 /**
  * Format a user role enum value to a user-friendly display string
  * Can be used anywhere in the application for consistent role presentation
@@ -59,4 +88,18 @@ export interface ExtendedUser extends User {
   name: string;
   hireDate: string; // ISO date string
   manager: string | null; // ID of the manager
+}
+
+// Employee type with all the extended information
+export interface Employee extends ExtendedUser {
+  specializations: SpecializationTag[];
+  efficiency: EfficiencyDetails;
+  workload: number; // Percentage 0-100
+  comments: EmployeeComment[];
+  schedule?: Record<string, string>; // Date -> Shift information
+  // Additional fields for employee profile
+  avatar?: string;
+  phoneNumber?: string;
+  address?: string;
+  emergencyContact?: string;
 } 

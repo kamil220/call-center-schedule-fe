@@ -49,7 +49,7 @@ export function NavRoleBased() {
   const managerMenuItems = [
     {
       title: "Pracownicy",
-      url: "/employees",
+      url: "/dashboard/employees",
       icon: IconUsers,
     },
     {
