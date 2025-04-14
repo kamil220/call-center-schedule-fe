@@ -2,6 +2,7 @@ import { create } from 'zustand';
 import { devtools, persist } from 'zustand/middleware';
 import { User, UserRole } from '@/types/user';
 import { authService } from '@/services/auth.service';
+import { getUserFromCookies, getTokenFromCookies } from '@/lib/cookies';
 
 // Define the state interface
 interface AuthState {
@@ -16,6 +17,8 @@ interface AuthState {
   clearError: () => void;
   // Helper for role checking
   hasRole: (role: UserRole) => boolean;
+  // Sync with cookies
+  syncWithCookies: () => void;
 }
 
 export const useAuthStore = create<AuthState>()(
@@ -99,6 +102,22 @@ export const useAuthStore = create<AuthState>()(
 
           return roleHierarchy[user.role] >= roleHierarchy[role];
         },
+        
+        // Sync store with cookies
+        syncWithCookies: () => {
+          // Check if we have authenticated user in cookies
+          const user = getUserFromCookies();
+          const token = getTokenFromCookies();
+          
+          if (user && token) {
+            // Update store with cookie data if available
+            set({
+              user,
+              isAuthenticated: true,
+              isLoading: false,
+            });
+          }
+        },
       }),
       { name: 'auth-store' } // Name for Redux DevTools
     ),
@@ -137,15 +156,16 @@ export const useAuthStatus = () => useAuthStore((state) => ({
   isLoading: state.isLoading,
 }));
 
-// Example of a selector to get user
+// Get user data
 export const useUser = () => useAuthStore((state) => state.user);
 
 // Check if user has a specific role
 export const useHasRole = (role: UserRole) => useAuthStore((state) => state.hasRole(role));
 
-// Example of action selector
+// Get auth actions
 export const useAuthActions = () => useAuthStore((state) => ({
   login: state.login,
   logout: state.logout,
   clearError: state.clearError,
+  syncWithCookies: state.syncWithCookies,
 })); 

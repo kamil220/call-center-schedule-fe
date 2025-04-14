@@ -1,4 +1,10 @@
 import { User, UserRole } from '@/types/user';
+import { 
+  setAuthCookies, 
+  clearAuthCookies, 
+  getUserFromCookies, 
+  getTokenFromCookies 
+} from '@/lib/cookies';
 // import { api } from './api';
 
 // Types
@@ -38,7 +44,12 @@ class AuthService {
         email: 'admin@email.com',
         role: UserRole.ADMIN,
       };
-      return { success: true, user: mockAdminUser, token: 'mock-admin-token' };
+      
+      // Set auth cookies
+      const token = 'mock-admin-token';
+      setAuthCookies(token, mockAdminUser);
+      
+      return { success: true, user: mockAdminUser, token };
     } else if (credentials.password === 'password') {
       // Simulate a generic user login for demo purposes
       const mockAgentUser: User = {
@@ -46,7 +57,12 @@ class AuthService {
         email: credentials.email,
         role: UserRole.AGENT,
       };
-      return { success: true, user: mockAgentUser, token: 'mock-agent-token' };
+      
+      // Set auth cookies
+      const token = 'mock-agent-token';
+      setAuthCookies(token, mockAgentUser);
+      
+      return { success: true, user: mockAgentUser, token };
     }
     
     return { success: false, error: 'Invalid email or password' };
@@ -55,6 +71,12 @@ class AuthService {
     // REAL IMPLEMENTATION - Uncomment when backend is ready
     // try {
     //   const response = await api.post<LoginResponse>('/auth/login', credentials);
+    //   
+    //   // If login successful, set auth cookies
+    //   if (response.success && response.user && response.token) {
+    //     setAuthCookies(response.token, response.user);
+    //   }
+    //   
     //   return response;
     // } catch (error) {
     //   // Handle specific API errors appropriately
@@ -74,11 +96,17 @@ class AuthService {
    * When real API is ready, implement token invalidation if needed
    */
   async logout(): Promise<void> {
+    // Clear auth cookies
+    clearAuthCookies();
+    
     // REAL IMPLEMENTATION - Uncomment when backend is ready
     // try {
     //   await api.post('/auth/logout');
+    //   clearAuthCookies();
     // } catch (error) {
     //   console.error('Error during logout:', error);
+    //   // Still clear cookies on client-side even if API call fails
+    //   clearAuthCookies();
     // }
     
     // For now, just simulate a delay
@@ -91,6 +119,14 @@ class AuthService {
    * Check if user has valid session (useful for initial auth state)
    */
   async getSession(): Promise<{ user: User | null }> {
+    // Try to get user from cookies first
+    const cookieUser = getUserFromCookies();
+    const token = getTokenFromCookies();
+    
+    if (cookieUser && token) {
+      return { user: cookieUser };
+    }
+    
     // REAL IMPLEMENTATION - Uncomment when backend is ready
     // try {
     //   const response = await api.get<{ user: User }>('/auth/session');

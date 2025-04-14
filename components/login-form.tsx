@@ -8,6 +8,8 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useLoginForm } from '@/hooks/use-login-form';
 import { Loader2 } from 'lucide-react';
+import { useAuthActions } from '@/store/auth.store';
+import { clearAuthCookies } from '@/lib/cookies';
 
 export function LoginForm() {
   const {
@@ -21,7 +23,15 @@ export function LoginForm() {
     handleSubmit,
   } = useLoginForm();
 
+  const { syncWithCookies } = useAuthActions();
   const router = useRouter();
+
+  // When component mounts, clear auth cookies to ensure clean login state
+  // and sync with cookies in case a valid session exists
+  useEffect(() => {
+    clearAuthCookies();
+    syncWithCookies();
+  }, [syncWithCookies]);
 
   useEffect(() => {
     if (isAuthenticated) {

@@ -1,7 +1,7 @@
 'use client';
 
 import React, { ReactNode, useEffect } from 'react';
-import { useAuthStatus } from '@/store/auth.store';
+import { useAuthStatus, useAuthActions } from '@/store/auth.store';
 import { useRouter } from 'next/navigation';
 import { Loader2 } from 'lucide-react';
 import { AppSidebar } from "@/components/app-sidebar";
@@ -9,7 +9,13 @@ import { SidebarProvider, SidebarInset } from "@/components/ui/sidebar";
 
 export default function DashboardLayout({ children }: { children: ReactNode }) {
   const { isAuthenticated, isLoading } = useAuthStatus();
+  const { syncWithCookies } = useAuthActions();
   const router = useRouter();
+
+  // Sync with cookies when component mounts
+  useEffect(() => {
+    syncWithCookies();
+  }, [syncWithCookies]);
 
   // Use useEffect to handle redirection after render
   useEffect(() => {

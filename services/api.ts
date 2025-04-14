@@ -5,6 +5,8 @@
  * It can be extended with more specialized functions as needed.
  */
 
+import { getTokenFromCookies } from '@/lib/cookies';
+
 // Constants
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || '/api';
 
@@ -34,13 +36,13 @@ export async function fetchApi<T>(
   const headers = {
     'Content-Type': 'application/json',
     ...options.headers,
-  };
+  } as Record<string, string>;
 
-  // Get token from auth store/cookie/localStorage if available
-  // const token = getAuthToken();
-  // if (token) {
-  //   headers.Authorization = `Bearer ${token}`;
-  // }
+  // Get token from cookies
+  const token = getTokenFromCookies();
+  if (token) {
+    headers['Authorization'] = `Bearer ${token}`;
+  }
 
   const config: RequestInit = {
     ...options,
