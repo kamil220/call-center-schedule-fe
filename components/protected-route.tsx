@@ -26,7 +26,6 @@ export function ProtectedRoute({ children }: ProtectedRouteProps) {
   // Sync with cookies only once on mount
   useEffect(() => {
     if (!hasSynced) {
-      console.log('ProtectedRoute [DEBUG]: Initial sync with cookies');
       syncWithCookies();
       setHasSynced(true);
     }
@@ -35,11 +34,8 @@ export function ProtectedRoute({ children }: ProtectedRouteProps) {
   // Handle authentication status
   useEffect(() => {
     if (hasSynced) {
-      console.log('ProtectedRoute [DEBUG]:', { isAuthenticated, isLoading });
-      
       // Only redirect after loading is finished and we know the user isn't authenticated
       if (!isLoading && !isAuthenticated) {
-        console.log('ProtectedRoute [DEBUG]: Not authenticated, redirecting to login');
         router.push('/login');
       }
     }
@@ -47,7 +43,6 @@ export function ProtectedRoute({ children }: ProtectedRouteProps) {
 
   // Show loading spinner while checking authentication
   if (isLoading || !hasSynced) {
-    console.log('ProtectedRoute [DEBUG]: Loading, showing spinner');
     return (
       <div className="flex items-center justify-center min-h-screen">
         <Loader2 className="h-8 w-8 animate-spin text-primary" />
@@ -57,11 +52,9 @@ export function ProtectedRoute({ children }: ProtectedRouteProps) {
 
   // Don't render anything while redirecting to login
   if (!isAuthenticated) {
-    console.log('ProtectedRoute [DEBUG]: Not authenticated, rendering null');
     return null;
   }
 
   // User is authenticated, render children
-  console.log('ProtectedRoute [DEBUG]: Authenticated, rendering children');
   return <>{children}</>;
 } 

@@ -77,7 +77,6 @@ export const useAuthStore = create<AuthState>()(
               isLoading: false,
             });
             
-            console.log('Auth Store [DEBUG] logout: Successfully logged out, cookies and store state cleared');
           } catch (error) {
             console.error('Auth Store [DEBUG] logout: Error during logout:', error);
             set({
@@ -94,7 +93,6 @@ export const useAuthStore = create<AuthState>()(
         hasRole: (role: UserRole) => {
           const { user } = get();
           if (!user) {
-            console.log('Auth Store [DEBUG] hasRole: No user, returning false');
             return false;
           }
 
@@ -106,11 +104,6 @@ export const useAuthStore = create<AuthState>()(
           };
 
           const hasRole = roleHierarchy[user.role] >= roleHierarchy[role];
-          console.log('Auth Store [DEBUG] hasRole:', { 
-            userRole: user.role, 
-            requiredRole: role, 
-            hasRole 
-          });
           return hasRole;
         },
         
@@ -120,25 +113,13 @@ export const useAuthStore = create<AuthState>()(
           const user = getUserFromCookies();
           const token = getTokenFromCookies();
           
-          console.log('Auth Store [DEBUG] syncWithCookies:', { 
-            hasCookieUser: !!user, 
-            hasCookieToken: !!token 
-          });
-          
           if (user && token) {
-            // Update store with cookie data if available
-            console.log('Auth Store [DEBUG] syncWithCookies: Setting user from cookies', { 
-              userEmail: user.email, 
-              userRole: user.role 
-            });
-            
+            // Update store with cookie data if available           
             set({
               user,
               isAuthenticated: true,
               isLoading: false,
             });
-          } else {
-            console.log('Auth Store [DEBUG] syncWithCookies: No valid cookies found');
           }
         },
       }),

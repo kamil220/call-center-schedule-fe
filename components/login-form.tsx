@@ -31,7 +31,6 @@ export function LoginForm() {
   // When component mounts, clear auth cookies AND reset Zustand state
   useEffect(() => {
     const resetAuth = async () => {
-      console.log('Login Form [DEBUG]: Clearing cookies and resetting auth state');
       // Clear cookies first
       clearAuthCookies();
       // Then reset store state via logout
@@ -42,19 +41,12 @@ export function LoginForm() {
   }, [resetAuthState]);
 
   useEffect(() => {
-    console.log('Login Form [DEBUG]:', { 
-      isAuthenticated, 
-      userRole: user?.role 
-    });
-    
     if (isAuthenticated) {
-      console.log('Login Form [DEBUG]: Authenticated, redirecting to dashboard');
       router.push('/dashboard');
     }
   }, [isAuthenticated, router, user]);
 
   if (isAuthenticated) {
-    console.log('Login Form [DEBUG]: Already authenticated, showing loader during redirect');
     return (
       <div className="flex items-center justify-center min-h-screen">
         <Loader2 className="h-8 w-8 animate-spin text-primary" />

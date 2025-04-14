@@ -1,13 +1,11 @@
 'use client';
 
-import { useEffect } from "react";
 import { UserRole } from "@/types/user";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableHeader, TableRow, TableHead, TableBody, TableCell } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
 import { PencilIcon, PlusIcon, TrashIcon, Users } from "lucide-react";
 import { useState } from "react";
-import { useUser } from "@/store/auth.store";
 import { RequireRole } from "@/components/require-role";
 
 // Mock user data for demonstration
@@ -20,16 +18,6 @@ const mockUsers = [
 
 export default function UsersPage() {
   const [users] = useState(mockUsers);
-  const user = useUser();
-  
-  useEffect(() => {
-    console.log('Users Page [DEBUG]:', {
-      mounted: true,
-      currentUser: user,
-      userRole: user?.role,
-      isAdmin: user?.role === UserRole.ADMIN
-    });
-  }, [user]);
 
   return (
     <RequireRole requiredRole={UserRole.ADMIN}>

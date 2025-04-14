@@ -25,24 +25,15 @@ export function RoleGuard({
   const router = useRouter();
 
   useEffect(() => {
-    console.log('RoleGuard [DEBUG]:', { 
-      hasRequiredRole,
-      requiredRole,
-      userRole: user?.role
-    });
 
     // If user doesn't have required role, redirect to forbidden page
     if (!hasRequiredRole) {
-      console.log('RoleGuard [DEBUG]: User lacks required role, redirecting to forbidden');
       router.push('/forbidden');
-    } else {
-      console.log('RoleGuard [DEBUG]: User has required role, rendering children');
     }
   }, [hasRequiredRole, router, requiredRole, user?.role]);
 
   // If doesn't have the role, show fallback or nothing while redirecting
   if (!hasRequiredRole) {
-    console.log('RoleGuard [DEBUG]: Not showing content, waiting for redirect');
     return fallback || null;
   }
 

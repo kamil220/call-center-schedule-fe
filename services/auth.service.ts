@@ -33,7 +33,6 @@ class AuthService {
    * When real API is ready, uncomment the api.post call and remove the mock implementation
    */
   async login(credentials: LoginCredentials): Promise<LoginResponse> {
-    console.log('AuthService [DEBUG] login:', { email: credentials.email });
     
     // Simulate network delay (remove in production)
     await new Promise((resolve) => setTimeout(resolve, 500));
@@ -49,22 +48,9 @@ class AuthService {
       
       // Set auth cookies
       const token = 'mock-admin-token';
-      console.log('AuthService [DEBUG] login: Setting admin cookies', { 
-        userRole: mockAdminUser.role,
-        token: token.substring(0, 4) + '...'
-      });
       
       setAuthCookies(token, mockAdminUser);
-      
-      // Verify cookies were set correctly for debugging
-      const userCookie = getUserFromCookies();
-      const tokenCookie = getTokenFromCookies();
-      console.log('AuthService [DEBUG] login: Cookies verification', {
-        userCookieExists: !!userCookie,
-        tokenCookieExists: !!tokenCookie,
-        userRole: userCookie?.role
-      });
-      
+
       return { success: true, user: mockAdminUser, token };
     } else if (credentials.password === 'password') {
       // Simulate a generic user login for demo purposes
@@ -76,26 +62,12 @@ class AuthService {
       
       // Set auth cookies
       const token = 'mock-agent-token';
-      console.log('AuthService [DEBUG] login: Setting agent cookies', { 
-        userRole: mockAgentUser.role,
-        token: token.substring(0, 4) + '...'
-      });
       
       setAuthCookies(token, mockAgentUser);
-      
-      // Verify cookies were set correctly for debugging
-      const userCookie = getUserFromCookies();
-      const tokenCookie = getTokenFromCookies();
-      console.log('AuthService [DEBUG] login: Cookies verification', {
-        userCookieExists: !!userCookie,
-        tokenCookieExists: !!tokenCookie,
-        userRole: userCookie?.role
-      });
       
       return { success: true, user: mockAgentUser, token };
     }
     
-    console.log('AuthService [DEBUG] login: Invalid credentials');
     return { success: false, error: 'Invalid email or password' };
     // --------------------------------------------------------
 
