@@ -6,7 +6,7 @@ import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Users, Search, PlusIcon } from "lucide-react";
 import { RequireRole } from "@/components/require-role";
-import { UserRole } from "@/types/user";
+import { UserRole } from "@/types";
 import { Input } from "@/components/ui/input";
 
 // Przykładowe dane pracowników

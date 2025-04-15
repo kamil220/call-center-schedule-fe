@@ -1,7 +1,7 @@
 'use client';
 
-import { UserRole, UserStatus, formatRoleName, formatStatus, ExtendedUser } from "@/types/user";
-import { User as ApiUser } from "@/types/user.type";
+import { UserRole, UserStatus, ExtendedUser, ApiUser } from "@/types";
+import { formatRoleName, formatStatus } from "@/lib/formatters";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { PlusIcon, Users } from "lucide-react";
@@ -188,12 +188,7 @@ export default function UsersPage() {
         // Need to use type assertion here because the API role type doesn't match our enum
         role: apiRole as any,
         active: activeStatus,
-        // Używamy nowego parametru name do wyszukiwania globalnego
         name: globalFilter || undefined,
-        // Usuwamy stare parametry, ponieważ backend obsługuje już to przez name
-        // email: globalFilter || undefined,
-        // firstName: globalFilter || undefined,
-        // lastName: globalFilter || undefined,
       });
       
       // Map API user type to ExtendedUser type
@@ -218,7 +213,7 @@ export default function UsersPage() {
       });
       
       setUsers(extendedUsers);
-      setTotalPages(Math.ceil(response.total / pageSize));
+      setTotalPages(response.totalPages || Math.ceil(response.total / pageSize));
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to fetch users');
       console.error('Error fetching users:', err);

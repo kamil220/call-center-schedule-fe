@@ -7,9 +7,13 @@
 
 import { getTokenFromCookies } from '@/lib/cookies';
 import { clearAuthCookies } from '@/lib/cookies';
-import { PaginatedResponse } from '../types/collection.type';
-import { User, UserListParams } from '../types/user.type';
-import { ApiError } from '../types/api.type';
+import {
+  ApiError,
+  PaginatedResponse,
+  UserDto,
+  UserListParamsDto,
+  CreateUserRequestDto
+} from '@/types'; 
 
 // Constants
 const API_BASE_URL = '/api';
@@ -59,7 +63,7 @@ export async function fetchApi<T>(
     if (contentType && contentType.includes('application/json')) {
       data = await response.json();
     } else {
-      data = await response.text();
+      data = await response.text(); // Keep text parsing for non-JSON responses
     }
 
     // Handle error responses
@@ -70,11 +74,14 @@ export async function fetchApi<T>(
         handleLogout();
       }
       
-      throw new ApiError(
-        data.message || 'An error occurred while fetching data',
-        response.status,
-        data
-      );
+      // Use the parsed data (might be JSON or text) for the error details
+      const errorMessage = (typeof data === 'object' && data?.message) 
+                         ? data.message 
+                         : typeof data === 'string' && data 
+                         ? data 
+                         : 'An error occurred while fetching data';
+                         
+      throw new ApiError(errorMessage, response.status, data);
     }
 
     return data as T;
@@ -86,7 +93,7 @@ export async function fetchApi<T>(
     // Convert generic fetch errors to ApiError
     throw new ApiError(
       error instanceof Error ? error.message : 'Network error',
-      0
+      0 // Use 0 or a specific code for network/unknown errors
     );
   }
 }
@@ -131,13 +138,14 @@ export const usersApi = {
    * Get users with filtering and pagination
    * Requires admin or planner role
    */
-  getUsers: (params?: UserListParams): Promise<PaginatedResponse<User>> => {
+  getUsers: (params?: UserListParamsDto): Promise<PaginatedResponse<UserDto>> => {
     // Convert params to URL query string
     const queryParams = new URLSearchParams();
     
     if (params) {
       Object.entries(params).forEach(([key, value]) => {
         if (value !== undefined) {
+          // Ensure boolean false is converted to 'false' string
           queryParams.append(key, String(value));
         }
       });
@@ -146,6 +154,19 @@ export const usersApi = {
     const queryString = queryParams.toString();
     const endpoint = `/users${queryString ? `?${queryString}` : ''}`;
     
-    return api.get<PaginatedResponse<User>>(endpoint);
+    // API returns PaginatedResponse of UserDto
+    return api.get<PaginatedResponse<UserDto>>(endpoint);
+  },
+  
+  /**
+   * Create a new user
+   * Requires admin role
+   * 
+   * @param userData - User data DTO
+   * @returns Newly created user data (as UserDto from API)
+   */
+  createUser: (userData: CreateUserRequestDto): Promise<UserDto> => {
+    // API call expects CreateUserRequestDto and returns UserDto
+    return api.post<UserDto, CreateUserRequestDto>('/users', userData);
   }
 };

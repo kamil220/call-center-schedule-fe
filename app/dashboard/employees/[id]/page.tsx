@@ -19,10 +19,10 @@ import {
   EfficiencyDetails as EfficiencyDetailsType,
   EmployeeComment,
   ScheduleDay
-} from "@/types/user";
+} from "@/types";
 import { Badge } from "@/components/ui/badge";
 import { Calendar } from "@/components/ui/calendar";
-import { formatRoleName, formatStatus } from "@/types/user";
+import { formatRoleName, formatStatus } from "@/lib/formatters";
 import {
   ArrowLeft,
   Phone,
@@ -124,7 +124,10 @@ const mockEmployees: Employee[] = [
     phoneNumber: "+48 123 456 789",
     address: "ul. Warszawska 10, 00-001 Warszawa",
     emergencyContact: "Anna Admin, +48 987 654 321",
-    schedule: generateMockSchedule()
+    schedule: generateMockSchedule(),
+    firstName: "",
+    lastName: "",
+    fullName: ""
   },
   {
     id: '2',
@@ -145,7 +148,10 @@ const mockEmployees: Employee[] = [
     comments: [],
     avatar: "/avatars/sara.jpg",
     phoneNumber: "+48 234 567 890",
-    schedule: generateMockSchedule()
+    schedule: generateMockSchedule(),
+    firstName: "",
+    lastName: "",
+    fullName: ""
   },
   {
     id: '3',
@@ -164,7 +170,10 @@ const mockEmployees: Employee[] = [
     },
     workload: 65,
     comments: [],
-    schedule: generateMockSchedule()
+    schedule: generateMockSchedule(),
+    firstName: "",
+    lastName: "",
+    fullName: ""
   },
   {
     id: '4',
@@ -183,7 +192,10 @@ const mockEmployees: Employee[] = [
     },
     workload: 95,
     comments: [],
-    schedule: generateMockSchedule()
+    schedule: generateMockSchedule(),
+    firstName: "",
+    lastName: "",
+    fullName: ""
   },
   {
     id: '5',
@@ -202,7 +214,10 @@ const mockEmployees: Employee[] = [
     },
     workload: 0,
     comments: [],
-    schedule: generateMockSchedule()
+    schedule: generateMockSchedule(),
+    firstName: "",
+    lastName: "",
+    fullName: ""
   },
   {
     id: '6',
@@ -221,7 +236,10 @@ const mockEmployees: Employee[] = [
     },
     workload: 80,
     comments: [],
-    schedule: generateMockSchedule()
+    schedule: generateMockSchedule(),
+    firstName: "",
+    lastName: "",
+    fullName: ""
   },
 ];
 

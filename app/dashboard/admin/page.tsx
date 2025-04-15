@@ -1,7 +1,7 @@
 'use client';
 
 import { RoleGuard } from "@/components/role-guard";
-import { UserRole } from "@/types/user";
+import { UserRole } from "@/types";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Shield } from "lucide-react";
 

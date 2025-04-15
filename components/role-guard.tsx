@@ -2,7 +2,7 @@
 
 import { ReactNode, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { UserRole } from '@/types/user';
+import { UserRole } from '@/types';
 import { useHasRole, useUser } from '@/store/auth.store';
 
 interface RoleGuardProps {

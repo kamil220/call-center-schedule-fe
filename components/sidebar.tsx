@@ -5,7 +5,7 @@ import { usePathname } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import { useUser, useAuthActions } from '@/store/auth.store';
-import { UserRole } from '@/types/user';
+import { UserRole } from '@/types';
 import {
   LayoutDashboard,
   Users,

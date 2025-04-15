@@ -1,4 +1,4 @@
-import { User } from '@/types/user';
+import { User } from '@/types';
 
 // Define cookie keys
 export const AUTH_TOKEN_COOKIE = 'auth_token';

@@ -1,15 +1,22 @@
-// Enum defining possible user roles based on documentation
+/**
+ * User Domain Models and Types
+ * 
+ * Defines the core data structures and types used within the application's 
+ * business logic related to users and employees.
+ */
+
+// Enum defining possible user roles for internal application use
 export enum UserRole {
-  ADMIN = 'ADMIN', // Can add Planners
-  PLANNER = 'PLANNER', // Planista
-  TEAM_MANAGER = 'TEAM_MANAGER', // Team Manager
-  AGENT = 'AGENT', // Agent
+  ADMIN = 'Admin',
+  PLANNER = 'Planner',
+  TEAM_MANAGER = 'Team Manager',
+  AGENT = 'Agent',
 }
 
 // Enum for user status
 export enum UserStatus {
-  ACTIVE = 'ACTIVE',
-  INACTIVE = 'INACTIVE',
+  ACTIVE = 'Active',
+  INACTIVE = 'Inactive',
 }
 
 // Available specialization tags for employees
@@ -53,56 +60,29 @@ export interface EmployeeComment {
   content: string;
 }
 
-/**
- * Format a user role enum value to a user-friendly display string
- * Can be used anywhere in the application for consistent role presentation
- */
-export const formatRoleName = (role: UserRole): string => {
-  switch (role) {
-    case UserRole.ADMIN:
-      return 'Admin';
-    case UserRole.PLANNER:
-      return 'Planner';
-    case UserRole.TEAM_MANAGER:
-      return 'Team Manager';
-    case UserRole.AGENT:
-      return 'Agent';
-    default:
-      return role;
-  }
-};
-
-/**
- * Format user status for display
- */
-export const formatStatus = (status: UserStatus): string => {
-  switch (status) {
-    case UserStatus.ACTIVE:
-      return 'Active';
-    case UserStatus.INACTIVE:
-      return 'Inactive';
-    default:
-      return status;
-  }
-};
-
-// Interface defining the structure of a User object
+// Interface defining the structure of a User domain model
 export interface User {
-  id: string; // Or number, depending on your backend
+  id: string; 
   email: string;
-  role: UserRole;
+  role: UserRole; // Use the domain enum
   status: UserStatus;
+  firstName: string;
+  lastName: string;
+  fullName: string;
+  // Add other domain-specific fields as needed
+}
+
+/**
+ * Extended User type for use in certain views that need additional properties
+ * beyond the basic User type.
+ */
+export interface ExtendedUser extends Omit<User, 'firstName' | 'lastName' | 'fullName'> {
   firstName?: string;
   lastName?: string;
   fullName?: string;
-  // Add other fields like name, avatarUrl etc. as needed
-}
-
-// Extended user type with additional fields for the dashboard
-export interface ExtendedUser extends User {
-  name: string;
-  hireDate: string; // ISO date string
-  manager: string | null; // ID of the manager
+  name: string; // Display name
+  hireDate?: string;
+  manager: string | null;
 }
 
 // Employee type with all the extended information
@@ -112,7 +92,6 @@ export interface Employee extends ExtendedUser {
   workload: number; // Percentage 0-100
   comments: EmployeeComment[];
   schedule?: Record<string, ScheduleDay>; // Date -> Schedule day information
-  // Additional fields for employee profile
   avatar?: string;
   phoneNumber?: string;
   address?: string;

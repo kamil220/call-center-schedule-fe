@@ -1,6 +1,6 @@
 import { create } from 'zustand';
 import { devtools, persist } from 'zustand/middleware';
-import { User, UserRole } from '@/types/user';
+import { User, UserRole, ApiUser } from '@/types';
 import { authService } from '@/services/auth.service';
 import { getUserFromCookies, getTokenFromCookies } from '@/lib/cookies';
 import { setLogoutHandler } from '@/services/api';
@@ -16,6 +16,7 @@ interface AuthState {
   // Actions
   login: (email: string, password: string) => Promise<void>;
   logout: () => Promise<void>;
+  checkSession: () => Promise<void>;
   clearError: () => void;
   // Helper for role checking
   hasRole: (role: UserRole) => boolean;
@@ -25,11 +26,37 @@ interface AuthState {
   fetchCurrentUser: () => Promise<void>;
 }
 
-export const useAuthStore = create<AuthState>()(
-  // Add persist middleware to store user session in localStorage/sessionStorage
-  persist(
-    // Add devtools middleware for debugging (shows up in Redux DevTools)
-    devtools(
+// Define the AuthActions interface
+interface AuthActions {
+  login: (email: string, password: string) => Promise<void>;
+  logout: () => Promise<void>;
+  checkSession: () => Promise<void>;
+  clearError: () => void;
+  // Add helper action for role checking
+  hasRole: (role: UserRole) => boolean;
+}
+
+// Helper function to check if the user has the required role based on raw API roles array
+const hasApiRole = (apiRoles: string[] | undefined, requiredRole: UserRole): boolean => {
+  if (!apiRoles || !Array.isArray(apiRoles) || apiRoles.length === 0) return false;
+  
+  // Map the requiredRole enum back to the API role string format
+  let requiredApiRole: string;
+  switch (requiredRole) {
+    case UserRole.ADMIN: requiredApiRole = 'ROLE_ADMIN'; break;
+    case UserRole.PLANNER: requiredApiRole = 'ROLE_PLANNER'; break;
+    case UserRole.TEAM_MANAGER: requiredApiRole = 'ROLE_TEAM_MANAGER'; break;
+    case UserRole.AGENT: requiredApiRole = 'ROLE_AGENT'; break;
+    default: return false;
+  }
+  
+  // Check if the API roles array includes the required role
+  return apiRoles.includes(requiredApiRole);
+};
+
+export const useAuthStore = create<AuthState & AuthActions>()(
+  devtools(
+    persist(
       (set, get) => ({
         // Initial state
         user: null,
@@ -51,14 +78,13 @@ export const useAuthStore = create<AuthState>()(
                 isAuthenticated: true,
                 isLoading: false,
               });
-              
-              // Additional side effects could be handled here or in a middleware
-              // e.g., redirecting the user
+              console.log('[Auth Store] User set after login:', get().user);
             } else {
               set({
                 error: result.error || 'Login failed',
                 isLoading: false,
               });
+              console.log('[Auth Store] Login failed, user state:', get().user);
             }
           } catch (error) {
             set({
@@ -94,22 +120,14 @@ export const useAuthStore = create<AuthState>()(
         // Helper to clear error state
         clearError: () => set({ error: null }),
 
-        // Helper to check if user has a specific role or higher
-        hasRole: (role: UserRole) => {
-          const { user } = get();
-          if (!user) {
-            return false;
-          }
-
-          const roleHierarchy = {
-            [UserRole.AGENT]: 1,
-            [UserRole.TEAM_MANAGER]: 2,
-            [UserRole.PLANNER]: 3,
-            [UserRole.ADMIN]: 4
-          };
-
-          const hasRole = roleHierarchy[user.role] >= roleHierarchy[role];
-          return hasRole;
+        // Updated hasRole to check API roles
+        hasRole: (role: UserRole): boolean => {
+          const user = get().user;
+          if (!user) return false;
+          
+          // Cast to ApiUser type from central definition
+          const apiUser = user as unknown as ApiUser;
+          return hasApiRole(apiUser.roles, role);
         },
         
         // Sync store with cookies
@@ -155,35 +173,30 @@ export const useAuthStore = create<AuthState>()(
             });
           }
         },
+
+        // Check session
+        checkSession: async () => {
+          // Only check if not already authenticated and not loading
+          if (get().isAuthenticated || get().isLoading) return;
+          
+          set({ isLoading: true, error: null });
+          const token = getTokenFromCookies(); // Check for token first
+          const user = token ? await authService.getCurrentUser() : null;
+          
+          set({
+            user: user,
+            isAuthenticated: !!user,
+            isLoading: false,
+          });
+        },
       }),
-      { name: 'auth-store' } // Name for Redux DevTools
+      {
+        name: 'auth-storage', // Name of the item in storage
+        // Optional: partialize to exclude certain parts of state from persistence
+        // partialize: (state) => ({ user: state.user, isAuthenticated: state.isAuthenticated }),
+      }
     ),
-    {
-      name: 'auth-session', // localStorage/sessionStorage key
-      // Use sessionStorage instead of localStorage
-      storage: {
-        getItem: (name) => {
-          if (typeof window === 'undefined') return null;
-          const str = sessionStorage.getItem(name);
-          if (!str) return null;
-          try {
-            return JSON.parse(str);
-          } catch {
-            return null;
-          }
-        },
-        setItem: (name, value) => {
-          if (typeof window !== 'undefined') {
-            sessionStorage.setItem(name, JSON.stringify(value));
-          }
-        },
-        removeItem: (name) => {
-          if (typeof window !== 'undefined') {
-            sessionStorage.removeItem(name);
-          }
-        },
-      },
-    }
+    { name: 'auth-store' } // Name for Redux DevTools
   )
 );
 
@@ -221,4 +234,9 @@ const initLogoutHandler = () => {
 };
 
 // Initialize right away
-initLogoutHandler(); 
+initLogoutHandler();
+
+// Initialize state from cookies on store creation
+// This ensures the initial state reflects any existing session
+// We run checkSession here, which handles loading the user if a token exists
+useAuthStore.getState().checkSession(); 

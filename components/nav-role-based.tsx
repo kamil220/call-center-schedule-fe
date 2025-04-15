@@ -14,18 +14,16 @@ import {
 } from "@tabler/icons-react"
 import { usePathname } from "next/navigation"
 
-import { UserRole } from "@/types/user"
-import { useUser, useHasRole } from "@/store/auth.store"
+import { useUser } from "@/store/auth.store"
 import { SidebarMenu, SidebarMenuItem, SidebarMenuButton, SidebarGroup, SidebarGroupLabel } from "@/components/ui/sidebar"
+import { useRoleCheck } from "@/hooks/use-role-check"
 
 export function NavRoleBased() {
-  const user = useUser()
   const pathname = usePathname()
-  const isTeamManager = useHasRole(UserRole.TEAM_MANAGER)
-  const isPlanner = useHasRole(UserRole.PLANNER)
-  const isAdmin = useHasRole(UserRole.ADMIN)
+  const user = useUser()
+  const { isAdmin, isPlanner, isTeamManager } = useRoleCheck()
   
-  // Define menu items based on roles
+  // Define menu items for each role section
   const agentMenuItems = [
     {
       title: "Dashboard",
@@ -60,7 +58,6 @@ export function NavRoleBased() {
       url: "/efficiency",
       icon: IconChartAreaLine,
     },
-    // Note: Wnioski urlopowe already in agent menu
   ]
 
   const plannerMenuItems = [
@@ -81,16 +78,15 @@ export function NavRoleBased() {
     },
   ]
 
-  // Admin menu items - removed Użytkownicy as it will be in the Administracja section
   const adminMenuItems = [
     {
       title: "Logi systemowe",
       url: "/system-logs",
       icon: IconTerminal2,
     },
+    // Other admin-specific items can go here
   ]
 
-  // New Administracja section with Użytkownicy at the top
   const administracjaMenuItems = [
     {
       title: "Użytkownicy",
@@ -106,42 +102,55 @@ export function NavRoleBased() {
 
   // Check if the current path matches the item's URL
   const isItemActive = (itemUrl: string) => {
-    return pathname === itemUrl || 
-           (itemUrl !== '/dashboard' && pathname.startsWith(itemUrl));
+    // Handle exact match for dashboard, prefix match for others
+    return pathname === itemUrl || (itemUrl !== '/dashboard' && pathname.startsWith(itemUrl));
   }
 
-  // Get all visible menu items based on role
-  const visibleItems = React.useMemo(() => {
-    let items = [...agentMenuItems]
-    
-    if (isTeamManager) {
-      items = [...items, ...managerMenuItems]
-    }
-    
-    if (isPlanner) {
-      items = [...items, ...plannerMenuItems]
-    }
-    
-    if (isAdmin) {
-      items = [...items, ...administracjaMenuItems, ...adminMenuItems]
-    }
-    
-    return items
-  }, [isTeamManager, isPlanner, isAdmin])
+  // Build the main menu items additively based on roles
+  const visibleMainMenuItems = React.useMemo(() => {
+    let items = [...agentMenuItems]; // Start with Agent items
+    console.log('[NavRoleBased] Memo - Initial items (Agent):', items);
 
-  if (!user) return null
+    if (isTeamManager || isPlanner || isAdmin) { // Managers see their own + Agent items
+      items = [...items, ...managerMenuItems];
+      console.log('[NavRoleBased] Memo - Added Manager items:', items);
+    }
+    
+    if (isPlanner || isAdmin) { // Planners see their own + Manager + Agent items
+      items = [...items, ...plannerMenuItems];
+      console.log('[NavRoleBased] Memo - Added Planner items:', items);
+    }
+    
+    if (isAdmin) { // Admins see their own (non-admin section) + Planner + Manager + Agent items
+      items = [...items, ...adminMenuItems];
+      console.log('[NavRoleBased] Memo - Added Admin items:', items);
+    }
+    
+    // Remove duplicates based on title (or URL if titles can be the same)
+    const uniqueItems = items.filter((item, index, self) =>
+      index === self.findIndex((t) => (
+        t.title === item.title
+      ))
+    );
+    console.log('[NavRoleBased] Memo - Final unique items:', uniqueItems);
+
+    return uniqueItems;
+  }, [isAdmin, isPlanner, isTeamManager]); // Updated dependencies
+
+  if (!user) return null;
 
   return (
     <>
+      {/* Main Menu Section */}
       <SidebarMenu>
-        {visibleItems.map((item, index) => (
+        {visibleMainMenuItems.map((item, index) => (
           <SidebarMenuItem key={index}>
             <SidebarMenuButton 
               asChild
               isActive={isItemActive(item.url)}
             >
               <a href={item.url}>
-                {item.icon && <item.icon className="size-4" />}
+                {item.icon && <item.icon className="size-4" />} 
                 <span>{item.title}</span>
               </a>
             </SidebarMenuButton>
@@ -149,7 +158,7 @@ export function NavRoleBased() {
         ))}
       </SidebarMenu>
       
-      {/* Display Administracja section for admin users */}
+      {/* Administration Section (Admin Only) */}
       {isAdmin && (
         <SidebarGroup>
           <SidebarGroupLabel>Administracja</SidebarGroupLabel>
@@ -161,7 +170,7 @@ export function NavRoleBased() {
                   isActive={isItemActive(item.url)}
                 >
                   <a href={item.url}>
-                    {item.icon && <item.icon className="size-4" />}
+                    {item.icon && <item.icon className="size-4" />} 
                     <span>{item.title}</span>
                   </a>
                 </SidebarMenuButton>

@@ -3,11 +3,17 @@
  * Re-exports types from various type definition files
  */
 
-// Collection types
-export * from './collection.type';
+// Re-export common types
+export * from './common/api.type';
+export * from './common/collection.type';
 
-// User types
-export * from './user.type';
+// Re-export auth types (API and Store)
+export * from './auth/api.types';
+export * from './auth/store.types';
 
-// API types
-export * from './api.type'; 
+// Re-export user types (API and Domain)
+export * from './users/api.types'; // Includes ApiUser interface
+export * from './users/domain.types';
+
+// Re-export mappers
+export * from './mappers'; 

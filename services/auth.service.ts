@@ -1,4 +1,3 @@
-import { User } from '@/types/user';
 import { 
   setAuthCookies, 
   clearAuthCookies, 
@@ -6,102 +5,96 @@ import {
   getTokenFromCookies 
 } from '@/lib/cookies';
 import { api } from './api';
-import { ApiError } from '../types/api.type';
-import { LoginRequestDto, LoginResponseDto, UserDto } from '@/types/api/auth';
-import { mapApiUserToUser } from '@/types/mappers';
+import { ApiError, User } from '@/types';
+import { LoginRequestDto, LoginResponseDto, UserDto } from '@/types';
+import { mapUserDtoToDomain } from '@/types';
 
 // Custom response type for login
 export interface LoginResponse {
   success: boolean;
   user?: User;
   error?: string;
-  token?: string;
 }
 
 /**
  * Authentication service
- * 
- * Handles user authentication operations (login, logout, session management)
+ * Handles login, logout, and potentially other auth-related API calls
  */
-class AuthService {
+export const authService = {
   /**
    * Login user
+   * 
+   * @param credentials - Login credentials (email, password)
+   * @returns LoginResponse containing success status, user data or error message
    */
-  async login(credentials: LoginRequestDto): Promise<LoginResponse> {
+  login: async (credentials: LoginRequestDto): Promise<LoginResponse> => {
     try {
-      const response = await api.post<LoginResponseDto>('/auth/login', credentials);
+      const response = await api.post<LoginResponseDto, LoginRequestDto>(
+        '/auth/login', 
+        credentials
+      );
       
-      // Map API user to our application User type
-      const user = mapApiUserToUser(response.user);
+      // Map API DTO to domain User model first
+      const domainUser = mapUserDtoToDomain(response.user);
       
-      // Save the token and user info
-      setAuthCookies(response.token, user);
+      // Store token and mapped user info in cookies
+      setAuthCookies(response.token, domainUser);
       
-      return { 
-        success: true, 
-        user, 
-        token: response.token 
-      };
+      return { success: true, user: domainUser };
+      
     } catch (error) {
-      // Handle specific API errors appropriately
+      let errorMessage = 'Login failed due to an unknown error.';
       if (error instanceof ApiError) {
-        if (error.status === 401) {
-          return {
-            success: false,
-            error: 'Invalid email or password'
-          };
-        }
-        return {
-          success: false,
-          error: typeof error.data === 'object' && error.data && 'message' in error.data 
-            ? String(error.data.message) 
-            : 'Login failed. Please try again.'
-        };
+        errorMessage = error.message;
+      } else if (error instanceof Error) {
+        errorMessage = error.message;
       }
-      return { success: false, error: 'An unexpected error occurred' };
+      
+      console.error('Login Error:', error);
+      return { success: false, error: errorMessage };
     }
-  }
+  },
 
   /**
    * Logout user
    */
-  async logout(): Promise<void> {
-    // Clear auth cookies
+  logout: async (): Promise<void> => {
+    // Optionally call a backend logout endpoint if it exists
+    // await api.post('/auth/logout');
+    
+    // Clear cookies and potentially reset state
     clearAuthCookies();
-        
-    // For now, just simulate a delay
-    await new Promise((resolve) => setTimeout(resolve, 100));
-  }
+  },
 
   /**
-   * Get information about the current logged-in user
+   * Get current user (e.g., on app load)
+   * This might involve fetching user data based on the token
    */
-  async getCurrentUser(): Promise<User | null> {
-    try {
-      const token = getTokenFromCookies();
-      if (!token) {
-        return null;
-      }
-
-      const response = await api.get<UserDto>('/auth/me');
-      
-      // Map API user to our application User type
-      return mapApiUserToUser(response);
-    } catch (error) {
-      if (error instanceof ApiError && error.status === 401) {
-        // Clear cookies if the session is invalid
-        clearAuthCookies();
-      }
+  getCurrentUser: async (): Promise<User | null> => {
+    const token = getTokenFromCookies();
+    if (!token) {
       return null;
     }
-  }
+    
+    try {
+      // Example: Fetch user profile using the token
+      // Adjust endpoint and response type as needed
+      const userDto = await api.get<UserDto>('/auth/me'); 
+      return mapUserDtoToDomain(userDto);
+    } catch (error) {
+      console.error('Failed to fetch current user:', error);
+      // If fetching fails (e.g., invalid token), clear cookies
+      clearAuthCookies();
+      return null;
+    }
+  },
 
   /**
    * Get current session
    * 
    * Check if user has valid session (useful for initial auth state)
    */
-  async getSession(): Promise<{ user: User | null }> {
+  getSession: async (): Promise<{ user: User | null }> => {
     // Try to get user from cookies first
     const cookieUser = getUserFromCookies();
     const token = getTokenFromCookies();
@@ -112,7 +105,4 @@ class AuthService {
     
     return { user: null };
   }
-}
-
-// Export as singleton
-export const authService = new AuthService(); 
+}; 
