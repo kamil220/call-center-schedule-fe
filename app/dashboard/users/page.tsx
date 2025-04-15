@@ -127,7 +127,11 @@ export default function UsersPage() {
         if (value === "null" && rowValue === null) {
           return true;
         }
-        return value.includes(rowValue as string);
+        // For non-null values, check if the value matches
+        if (value !== "null" && rowValue !== null) {
+          return value === rowValue;
+        }
+        return false;
       },
     },
   ];
@@ -468,7 +472,12 @@ export default function UsersPage() {
 
                 {/* Manager filter */}
                 <Select
-                  value={(table.getColumn("manager")?.getFilterValue() as string) || "all_managers"}
+                  value={(() => {
+                    const filterValue = table.getColumn("manager")?.getFilterValue() as string;
+                    if (!filterValue) return "all_managers";
+                    if (filterValue === "null") return "no_manager";
+                    return filterValue;
+                  })()}
                   onValueChange={(value) => {
                     if (value === "all_managers") {
                       table.getColumn("manager")?.setFilterValue(undefined);
@@ -480,7 +489,15 @@ export default function UsersPage() {
                   }}
                 >
                   <SelectTrigger className="w-[180px]">
-                    <SelectValue placeholder="Filter by manager" />
+                    <SelectValue placeholder="Filter by manager">
+                      {(() => {
+                        const filterValue = table.getColumn("manager")?.getFilterValue() as string;
+                        if (!filterValue) return "All Managers";
+                        if (filterValue === "null") return "No Manager";
+                        const manager = managers.find(m => m.id === filterValue);
+                        return manager ? manager.name : "All Managers";
+                      })()}
+                    </SelectValue>
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="all_managers">All Managers</SelectItem>
