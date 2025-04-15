@@ -15,18 +15,32 @@ import { User, UserRole, UserStatus } from './users/domain.types';
  * @returns The corresponding domain UserRole enum value (defaults to AGENT if mapping fails).
  */
 export const mapApiRoleToDomain = (apiRoles: string[]): UserRole => {
-  // Assuming the primary role is the first one relevant to our domain enum
-  const apiRole = apiRoles?.[0];
-  // console.log('apiRole', apiRole); // Log from previous debugging
-  switch (apiRole) {
-    case 'ROLE_ADMIN': return UserRole.ADMIN;
-    case 'ROLE_PLANNER': return UserRole.PLANNER;
-    case 'ROLE_TEAM_MANAGER': return UserRole.TEAM_MANAGER;
-    case 'ROLE_AGENT': return UserRole.AGENT;
-    default:
-      console.warn(`[Mapper] Unknown API role encountered: ${apiRole}`);
-      return UserRole.AGENT; // Default fallback
+  // Return the highest priority role if multiple roles exist
+  if (!apiRoles || !apiRoles.length) {
+    console.warn('[Mapper] No roles provided, defaulting to AGENT');
+    return UserRole.AGENT;
   }
+  
+  // Check for admin role first (highest priority)
+  if (apiRoles.includes('ROLE_ADMIN')) {
+    return UserRole.ADMIN;
+  }
+  
+  // Then check for other roles in order of priority
+  if (apiRoles.includes('ROLE_TEAM_MANAGER')) {
+    return UserRole.TEAM_MANAGER;
+  }
+  
+  if (apiRoles.includes('ROLE_PLANNER')) {
+    return UserRole.PLANNER;
+  }
+  
+  if (apiRoles.includes('ROLE_AGENT')) {
+    return UserRole.AGENT;
+  }
+  
+  console.warn(`[Mapper] Unknown API roles encountered: ${apiRoles.join(', ')}`);
+  return UserRole.AGENT; // Default fallback
 };
 
 /**
@@ -36,7 +50,13 @@ export const mapApiRoleToDomain = (apiRoles: string[]): UserRole => {
  * @returns A User object conforming to the application's domain model.
  */
 export const mapUserDtoToDomain = (userDto: UserDto): User => {
-  const mappedRole = mapApiRoleToDomain(userDto.roles);
+  console.log('[Mapper] mapUserDtoToDomain - Received userDto:', JSON.stringify(userDto));
+  
+  if (!userDto.roles || !Array.isArray(userDto.roles)) {
+    console.warn('[Mapper] mapUserDtoToDomain - No roles array in userDto:', userDto);
+  }
+  
+  const mappedRole = mapApiRoleToDomain(userDto.roles || []);
   console.log('[Mapper] mapUserDtoToDomain - Mapped Role:', mappedRole, '(from API roles:', userDto.roles, ')');
 
   const domainUser = {
@@ -48,6 +68,6 @@ export const mapUserDtoToDomain = (userDto: UserDto): User => {
     role: mappedRole, // Map roles
     status: userDto.active ? UserStatus.ACTIVE : UserStatus.INACTIVE, // Map active to status enum
   };
-  console.log('[Mapper] mapUserDtoToDomain - Returning Domain User:', domainUser);
+  console.log('[Mapper] mapUserDtoToDomain - Returning Domain User:', JSON.stringify(domainUser));
   return domainUser;
 }; 

@@ -35,6 +35,16 @@ export type UserRoleApi =
   | 'ROLE_AGENT';
 
 /**
+ * Available roles for user creation and management
+ */
+export const AVAILABLE_ROLES: UserRoleApi[] = [
+  'ROLE_ADMIN',
+  'ROLE_PLANNER',
+  'ROLE_TEAM_MANAGER',
+  'ROLE_AGENT'
+];
+
+/**
  * Sort field options for user lists from the API
  */
 export type UserSortFieldApi = 'id' | 'email' | 'firstName' | 'lastName' | 'active';

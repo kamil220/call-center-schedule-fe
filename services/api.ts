@@ -75,8 +75,8 @@ export async function fetchApi<T>(
       }
       
       // Use the parsed data (might be JSON or text) for the error details
-      const errorMessage = (typeof data === 'object' && data?.message) 
-                         ? data.message 
+      const errorMessage = (typeof data === 'object' && ( data?.message || data?.error)) 
+                         ? data.message || data.error
                          : typeof data === 'string' && data 
                          ? data 
                          : 'An error occurred while fetching data';

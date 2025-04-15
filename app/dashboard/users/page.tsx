@@ -11,6 +11,8 @@ import { usersApi } from "@/services/api";
 import { Loader2 } from "lucide-react";
 import { format } from "date-fns";
 import { Pagination } from "@/components/ui/pagination";
+import { toast } from "sonner";
+import { CreateUserRequestDto, UserRoleApi } from "@/types/users/api.types";
 
 // Data table imports
 import {
@@ -59,6 +61,10 @@ export default function UsersPage() {
     hireDate: format(new Date(), 'yyyy-MM-dd'),
     manager: null
   });
+
+  // Form validation state
+  const [formErrors, setFormErrors] = useState<Record<string, string>>({});
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   // Define columns
   const columns: ColumnDef<ExtendedUser>[] = [
@@ -166,7 +172,7 @@ export default function UsersPage() {
     setError(null);
     try {
       // Convert our UserRole enum to the API's UserRole string type
-      let apiRole: string | undefined;
+      let apiRole: UserRoleApi | undefined;
       const roleFilter = table.getColumn("role")?.getFilterValue() as UserRole | undefined;
       
       if (roleFilter) {
@@ -189,8 +195,7 @@ export default function UsersPage() {
       const response = await usersApi.getUsers({
         page,
         limit: pageSize, // renamed from pageSize to limit to match API
-        // Need to use type assertion here because the API role type doesn't match our enum
-        role: apiRole as any,
+        role: apiRole,
         active: activeStatus,
         name: globalFilter || undefined,
       });
@@ -231,27 +236,63 @@ export default function UsersPage() {
     fetchUsers();
   }, [page, globalFilter, columnFilters]);
 
+  // Validate form fields
+  const validateForm = () => {
+    const errors: Record<string, string> = {};
+    
+    // Validate name has first and last name
+    if (!newUser.name) {
+      errors.name = "Name is required";
+    } else {
+      const nameParts = newUser.name.trim().split(' ');
+      if (nameParts.length < 2 || !nameParts[1]) {
+        errors.name = "Both first and last name are required";
+      }
+    }
+    
+    // Validate email
+    if (!newUser.email) {
+      errors.email = "Email is required";
+    } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(newUser.email)) {
+      errors.email = "Please enter a valid email address";
+    }
+    
+    setFormErrors(errors);
+    return Object.keys(errors).length === 0;
+  };
+
+  // Reset form errors when fields change
+  useEffect(() => {
+    setFormErrors({});
+  }, [newUser]);
+
   // Function to add a new user
   const handleAddUser = async () => {
-    if (!newUser.name || !newUser.email) return;
+    if (!validateForm()) return;
+    
+    setIsSubmitting(true);
     
     try {
-      // In a real app, you would call an API endpoint to create the user
-      // For now, we'll just add it to the local state
-      const user: ExtendedUser = {
-        id: Math.random().toString(36).substring(7), // Generate random ID
-        name: newUser.name,
-        email: newUser.email,
-        role: newUser.role || UserRole.AGENT,
-        status: newUser.status || UserStatus.ACTIVE,
-        hireDate: newUser.hireDate || format(new Date(), 'yyyy-MM-dd'),
-        manager: newUser.manager || null
+      // Split name into first and last name
+      const name = newUser.name || '';
+      const [firstName, ...lastNameParts] = name.split(' ');
+      const lastName = lastNameParts.join(' ');
+
+      // Create user data for API
+      const userData: CreateUserRequestDto = {
+        email: newUser.email || '',
+        password: 'TemporaryPassword123!', // TODO: Add proper password handling
+        firstName,
+        lastName,
+        roles: [newUser.role === UserRole.ADMIN ? 'ROLE_ADMIN' : 
+                newUser.role === UserRole.PLANNER ? 'ROLE_PLANNER' :
+                newUser.role === UserRole.TEAM_MANAGER ? 'ROLE_TEAM_MANAGER' : 'ROLE_AGENT']
       };
+
+      await usersApi.createUser(userData);
       
-      setUsers([...users, user]);
+      // Close dialog and reset form first
       setIsDialogOpen(false);
-      
-      // Reset form
       setNewUser({
         name: '',
         email: '',
@@ -260,12 +301,91 @@ export default function UsersPage() {
         hireDate: format(new Date(), 'yyyy-MM-dd'),
         manager: null
       });
+      setFormErrors({});
+      
+      // Then show success toast
+      toast("User created successfully", {
+        description: "The user has been added to the system",
+        action: {
+          label: "Close",
+          onClick: () => console.log("Toast closed"),
+        },
+        className: "text-foreground dark:text-foreground",
+      });
       
       // Refresh users list
       fetchUsers();
-    } catch (err) {
-      console.error('Error adding user:', err);
+    } catch (err: unknown) {
+      // Handle backend validation errors
+      if (err && typeof err === 'object' && 'errors' in err) {
+        const apiErrors = (err as { errors: Record<string, string> }).errors;
+        const formattedErrors: Record<string, string> = {};
+        
+        // Map API error fields to form fields
+        if (apiErrors.email) {
+          formattedErrors.email = apiErrors.email;
+        }
+        
+        if (apiErrors.lastName) {
+          formattedErrors.name = "Last name is required";
+        }
+        
+        if (apiErrors.firstName) {
+          formattedErrors.name = "First name is required";
+        }
+        
+        if (Object.keys(formattedErrors).length > 0) {
+          setFormErrors(formattedErrors);
+        } else {
+          toast("Failed to create user", {
+            description: extractErrorMessage(err),
+            action: {
+              label: "Close",
+              onClick: () => console.log("Toast closed"),
+            },
+            className: "text-foreground dark:text-foreground",
+          });
+        }
+      } else {
+        toast("Failed to create user", {
+          description: extractErrorMessage(err),
+          action: {
+            label: "Close",
+            onClick: () => console.log("Toast closed"),
+          },
+          className: "text-foreground dark:text-foreground",
+        });
+      }
+    } finally {
+      setIsSubmitting(false);
     }
+  };
+
+  // Helper function to extract error message from various error formats
+  const extractErrorMessage = (err: unknown): string => {
+    if (err instanceof Error) {
+      return err.message;
+    }
+    
+    if (typeof err === 'object' && err !== null) {
+      // Check for ApiError with details property that has an error field
+      if ('details' in err && err.details && 
+          typeof err.details === 'object' && 'error' in err.details) {
+        return (err.details as { error: string }).error;
+      }
+      
+      // Direct error field in the error object (e.g., {"error": "message"})
+      if ('error' in err && typeof err.error === 'string') {
+        return err.error;
+      }
+      
+      // Message property on the object
+      if ('message' in err && typeof err.message === 'string') {
+        return err.message;
+      }
+    }
+    
+    return "An unknown error occurred";
   };
 
   // Get unique managers for filter
@@ -310,24 +430,34 @@ export default function UsersPage() {
                   <Label htmlFor="name" className="text-right">
                     Name
                   </Label>
-                  <Input
-                    id="name"
-                    className="col-span-3"
-                    value={newUser.name}
-                    onChange={(e) => setNewUser({ ...newUser, name: e.target.value })}
-                  />
+                  <div className="col-span-3">
+                    <Input
+                      id="name"
+                      className={formErrors.name ? "border-red-500" : ""}
+                      value={newUser.name}
+                      onChange={(e) => setNewUser({ ...newUser, name: e.target.value })}
+                    />
+                    {formErrors.name && (
+                      <p className="text-red-500 text-sm mt-1">{formErrors.name}</p>
+                    )}
+                  </div>
                 </div>
                 <div className="grid grid-cols-4 items-center gap-4">
                   <Label htmlFor="email" className="text-right">
                     Email
                   </Label>
-                  <Input
-                    id="email"
-                    type="email"
-                    className="col-span-3"
-                    value={newUser.email}
-                    onChange={(e) => setNewUser({ ...newUser, email: e.target.value })}
-                  />
+                  <div className="col-span-3">
+                    <Input
+                      id="email"
+                      type="email"
+                      className={formErrors.email ? "border-red-500" : ""}
+                      value={newUser.email}
+                      onChange={(e) => setNewUser({ ...newUser, email: e.target.value })}
+                    />
+                    {formErrors.email && (
+                      <p className="text-red-500 text-sm mt-1">{formErrors.email}</p>
+                    )}
+                  </div>
                 </div>
                 <div className="grid grid-cols-4 items-center gap-4">
                   <Label htmlFor="role" className="text-right">
@@ -404,7 +534,14 @@ export default function UsersPage() {
                 </div>
               </div>
               <DialogFooter>
-                <Button type="submit" onClick={handleAddUser}>Add User</Button>
+                <Button type="submit" onClick={handleAddUser} disabled={isSubmitting}>
+                  {isSubmitting ? (
+                    <>
+                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                      Adding...
+                    </>
+                  ) : "Add User"}
+                </Button>
               </DialogFooter>
             </DialogContent>
           </Dialog>

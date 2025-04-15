@@ -125,9 +125,41 @@ export const useAuthStore = create<AuthState & AuthActions>()(
           const user = get().user;
           if (!user) return false;
           
-          // Cast to ApiUser type from central definition
-          const apiUser = user as unknown as ApiUser;
-          return hasApiRole(apiUser.roles, role);
+          console.log('[Auth Store] hasRole - User:', user);
+          console.log('[Auth Store] hasRole - Required role:', role);
+          console.log('[Auth Store] hasRole - User role:', user.role);
+          
+          // Direct role check - compare the user role to the required role
+          // Return true if the user role matches or is higher privilege than the required role
+          // ADMIN > TEAM_MANAGER > PLANNER > AGENT
+          
+          if (user.role === UserRole.ADMIN) {
+            // Admin has access to everything
+            return true;
+          }
+          
+          if (user.role === UserRole.TEAM_MANAGER) {
+            // Team managers have access to team manager, planner, and agent roles
+            return role === UserRole.TEAM_MANAGER ||
+                   role === UserRole.PLANNER ||
+                   role === UserRole.AGENT;
+          }
+          
+          if (user.role === UserRole.PLANNER) {
+            // Planners have access to planner and agent roles
+            return role === UserRole.PLANNER || 
+                   role === UserRole.AGENT;
+          }
+          
+          if (user.role === UserRole.AGENT) {
+            // Agents only have access to agent role
+            return role === UserRole.AGENT;
+          }
+
+          // Fall back to direct comparison if none of the above apply
+          const result = user.role === role;
+          console.log('[Auth Store] hasRole - Result:', result);
+          return result;
         },
         
         // Sync store with cookies
