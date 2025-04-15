@@ -109,21 +109,17 @@ export function NavRoleBased() {
   // Build the main menu items additively based on roles
   const visibleMainMenuItems = React.useMemo(() => {
     let items = [...agentMenuItems]; // Start with Agent items
-    console.log('[NavRoleBased] Memo - Initial items (Agent):', items);
 
     if (isTeamManager || isPlanner || isAdmin) { // Managers see their own + Agent items
       items = [...items, ...managerMenuItems];
-      console.log('[NavRoleBased] Memo - Added Manager items:', items);
     }
     
     if (isPlanner || isAdmin) { // Planners see their own + Manager + Agent items
       items = [...items, ...plannerMenuItems];
-      console.log('[NavRoleBased] Memo - Added Planner items:', items);
     }
     
     if (isAdmin) { // Admins see their own (non-admin section) + Planner + Manager + Agent items
       items = [...items, ...adminMenuItems];
-      console.log('[NavRoleBased] Memo - Added Admin items:', items);
     }
     
     // Remove duplicates based on title (or URL if titles can be the same)
@@ -132,7 +128,6 @@ export function NavRoleBased() {
         t.title === item.title
       ))
     );
-    console.log('[NavRoleBased] Memo - Final unique items:', uniqueItems);
 
     return uniqueItems;
   }, [isAdmin, isPlanner, isTeamManager]); // Updated dependencies
