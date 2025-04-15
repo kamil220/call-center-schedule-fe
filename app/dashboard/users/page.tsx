@@ -59,7 +59,8 @@ export default function UsersPage() {
     role: UserRole.AGENT,
     status: UserStatus.ACTIVE,
     hireDate: format(new Date(), 'yyyy-MM-dd'),
-    manager: null
+    manager: null,
+    managerName: null
   });
 
   // Form validation state
@@ -114,18 +115,24 @@ export default function UsersPage() {
       accessorKey: "hireDate",
       header: "Hire Date",
       cell: ({ row }) => {
-        const date = new Date(row.getValue("hireDate"));
-        return <div>{date.toLocaleDateString()}</div>;
+        const dateValue = row.getValue("hireDate");
+        if (!dateValue) return <div>-</div>;
+        
+        try {
+          const date = new Date(dateValue as string);
+          return <div>{format(date, 'dd/MM/yyyy')}</div>;
+        } catch {
+          return <div>Invalid date</div>;
+        }
       },
     },
     {
       accessorKey: "manager",
       header: "Manager",
       cell: ({ row }) => {
-        const managerId = row.getValue("manager") as string | null;
-        if (!managerId) return <div>-</div>;
-        const manager = users.find(u => u.id === managerId);
-        return <div>{manager?.name || 'Unknown'}</div>;
+        const managerName = row.original.managerName;
+        if (!managerName) return <div>-</div>;
+        return <div>{managerName}</div>;
       },
       filterFn: (row, id, value) => {
         const rowValue = row.getValue(id);
@@ -216,8 +223,9 @@ export default function UsersPage() {
           role,
           status: apiUser.active ? UserStatus.ACTIVE : UserStatus.INACTIVE,
           name: apiUser.fullName || `${apiUser.firstName || ''} ${apiUser.lastName || ''}`.trim(),
-          hireDate: format(new Date(), 'yyyy-MM-dd'), // Placeholder since API doesn't provide hireDate
-          manager: null, // Placeholder since API doesn't provide manager
+          hireDate: apiUser.hireDate || format(new Date(), 'yyyy-MM-dd'), // Use API hireDate if available, otherwise use current date
+          manager: apiUser.manager?.id || null, // Use manager ID from API if available
+          managerName: apiUser.manager?.fullName || null, // Store manager name for display
         };
       });
       
@@ -299,7 +307,8 @@ export default function UsersPage() {
         role: UserRole.AGENT,
         status: UserStatus.ACTIVE,
         hireDate: format(new Date(), 'yyyy-MM-dd'),
-        manager: null
+        manager: null,
+        managerName: null
       });
       setFormErrors({});
       
@@ -391,7 +400,10 @@ export default function UsersPage() {
   // Get unique managers for filter
   const managers = users
     .filter(user => user.role === UserRole.ADMIN || user.role === UserRole.TEAM_MANAGER)
-    .map(user => ({ id: user.id, name: user.name }));
+    .map(user => ({ 
+      id: user.id, 
+      name: user.name 
+    }));
 
   // Handle page change
   const handlePageChange = (newPage: number) => {
@@ -517,7 +529,14 @@ export default function UsersPage() {
                   </Label>
                   <Select
                     value={newUser.manager || "no_manager"}
-                    onValueChange={(value) => setNewUser({ ...newUser, manager: value === "no_manager" ? null : value })}
+                    onValueChange={(value) => {
+                      const manager = value === "no_manager" ? null : managers.find(m => m.id === value);
+                      setNewUser({ 
+                        ...newUser, 
+                        manager: value === "no_manager" ? null : value,
+                        managerName: manager ? manager.name : null
+                      });
+                    }}
                   >
                     <SelectTrigger id="manager" className="col-span-3">
                       <SelectValue placeholder="Select a manager" />

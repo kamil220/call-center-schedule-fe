@@ -23,6 +23,12 @@ export interface ApiUser {
   fullName: string;
   roles: string[]; // API returns roles as string array (e.g., ["ROLE_ADMIN"])
   active: boolean;
+  hireDate?: string | null; // ISO date string format
+  manager?: {
+    id: string;
+    fullName: string;
+    email: string;
+  } | null;
 }
 
 /**

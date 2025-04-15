@@ -83,6 +83,7 @@ export interface ExtendedUser extends Omit<User, 'firstName' | 'lastName' | 'ful
   name: string; // Display name
   hireDate?: string;
   manager: string | null;
+  managerName?: string | null; // Name of the manager for display purposes
 }
 
 // Employee type with all the extended information
