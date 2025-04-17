@@ -30,21 +30,6 @@ export function NavRoleBased() {
       url: "/dashboard",
       icon: IconDashboard,
     },
-    {
-      title: "Mój grafik",
-      url: "/my-schedule",
-      icon: IconCalendarTime,
-    },
-    {
-      title: "Wnioski urlopowe",
-      url: "/leave-requests",
-      icon: IconFileCertificate,
-    },
-    {
-      title: "Profil pracownika",
-      url: "/employee-profile",
-      icon: IconUserCircle,
-    },
   ]
 
   const managerMenuItems = [
@@ -52,11 +37,6 @@ export function NavRoleBased() {
       title: "Pracownicy",
       url: "/dashboard/employees",
       icon: IconUsers,
-    },
-    {
-      title: "Efektywność",
-      url: "/efficiency",
-      icon: IconChartAreaLine,
     },
   ]
 
@@ -71,19 +51,9 @@ export function NavRoleBased() {
       url: "/planner",
       icon: IconTimeline,
     },
-    {
-      title: "Dostępność pracowników",
-      url: "/employee-availability",
-      icon: IconListDetails,
-    },
   ]
 
-  const adminMenuItems = [
-    {
-      title: "Logi systemowe",
-      url: "/system-logs",
-      icon: IconTerminal2,
-    },
+  const adminMenuItems: never[] = [
     // Other admin-specific items can go here
   ]
 
