@@ -63,7 +63,7 @@ export interface UserListParamsDto extends PaginationParams<UserSortFieldApi> {
   lastName?: string;
   email?: string;
   name?: string;
-  role?: UserRoleApi;
+  roles?: UserRoleApi[];
   active?: boolean;
 }
 

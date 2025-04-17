@@ -40,6 +40,12 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 
+// Define a type for the manager dropdown items
+interface ManagerOption {
+  id: string;
+  name: string;
+}
+
 export default function UsersPage() {
   const [sorting, setSorting] = useState<SortingState>([]);
   const [columnFilters, setColumnFilters] = useState<ColumnFiltersState>([]);
@@ -51,6 +57,7 @@ export default function UsersPage() {
   const [page, setPage] = useState(0);
   const [pageSize, setPageSize] = useState(10);
   const [totalPages, setTotalPages] = useState(1);
+  const [managerOptions, setManagerOptions] = useState<ManagerOption[]>([]); // Renamed state for manager options
   
   // Form state for new user
   const [newUser, setNewUser] = useState<Partial<ExtendedUser>>({
@@ -178,17 +185,20 @@ export default function UsersPage() {
     setIsLoading(true);
     setError(null);
     try {
-      // Convert our UserRole enum to the API's UserRole string type
-      let apiRole: UserRoleApi | undefined;
+      // Convert our UserRole enum to the API's UserRole string type for the filter
+      let apiRoles: UserRoleApi[] | undefined;
       const roleFilter = table.getColumn("role")?.getFilterValue() as UserRole | undefined;
       
       if (roleFilter) {
-        // Map from our internal enum to the API's string format
+        let apiRole: UserRoleApi | undefined;
         switch (roleFilter) {
           case UserRole.ADMIN: apiRole = 'ROLE_ADMIN'; break;
           case UserRole.AGENT: apiRole = 'ROLE_AGENT'; break;
           case UserRole.PLANNER: apiRole = 'ROLE_PLANNER'; break;
           case UserRole.TEAM_MANAGER: apiRole = 'ROLE_TEAM_MANAGER'; break;
+        }
+        if (apiRole) {
+          apiRoles = [apiRole]; // API expects an array now
         }
       }
       
@@ -201,8 +211,8 @@ export default function UsersPage() {
       
       const response = await usersApi.getUsers({
         page,
-        limit: pageSize, // renamed from pageSize to limit to match API
-        role: apiRole,
+        limit: pageSize,
+        roles: apiRoles, // Use roles array
         active: activeStatus,
         name: globalFilter || undefined,
       });
@@ -239,10 +249,39 @@ export default function UsersPage() {
     }
   };
 
-  // Fetch users on initial load and when filters change
+  // Function to fetch all potential managers for dropdowns
+  const fetchManagers = async () => {
+    try {
+      const managerRoles: UserRoleApi[] = ['ROLE_ADMIN', 'ROLE_PLANNER', 'ROLE_TEAM_MANAGER'];
+      // Fetch all managers in a single request using the new 'roles' filter
+      const response = await usersApi.getUsers({ 
+        limit: 100, // Fetch up to 100 potential managers
+        roles: managerRoles 
+      });
+
+      const managerOptions: ManagerOption[] = response.items.map(user => ({
+        id: user.id,
+        name: user.fullName || `${user.firstName || ''} ${user.lastName || ''}`.trim(),
+      }));
+      
+      // No need for deduplication if backend handles roles correctly
+      setManagerOptions(managerOptions);
+    } catch (err) {
+      console.error('Error fetching managers:', err);
+      toast("Failed to load managers list", {
+        description: extractErrorMessage(err),
+      });
+    }
+  };
+
+  // Fetch users and managers on initial load
   useEffect(() => {
     fetchUsers();
-  }, [page, globalFilter, columnFilters]);
+  }, [page, pageSize, globalFilter, columnFilters]);
+
+  useEffect(() => {
+    fetchManagers(); // Fetch managers once on component mount
+  }, []);
 
   // Validate form fields
   const validateForm = () => {
@@ -397,14 +436,6 @@ export default function UsersPage() {
     return "An unknown error occurred";
   };
 
-  // Get unique managers for filter
-  const managers = users
-    .filter(user => user.role === UserRole.ADMIN || user.role === UserRole.TEAM_MANAGER)
-    .map(user => ({ 
-      id: user.id, 
-      name: user.name 
-    }));
-
   // Handle page change
   const handlePageChange = (newPage: number) => {
     setPage(newPage);
@@ -530,11 +561,11 @@ export default function UsersPage() {
                   <Select
                     value={newUser.manager || "no_manager"}
                     onValueChange={(value) => {
-                      const manager = value === "no_manager" ? null : managers.find(m => m.id === value);
+                      const selectedManager = value === "no_manager" ? null : managerOptions.find(m => m.id === value);
                       setNewUser({ 
                         ...newUser, 
                         manager: value === "no_manager" ? null : value,
-                        managerName: manager ? manager.name : null
+                        managerName: selectedManager ? selectedManager.name : null
                       });
                     }}
                   >
@@ -543,9 +574,9 @@ export default function UsersPage() {
                     </SelectTrigger>
                     <SelectContent>
                       <SelectItem value="no_manager">No Manager</SelectItem>
-                      {managers.map((manager) => (
-                        <SelectItem key={manager.id} value={manager.id}>
-                          {manager.name}
+                      {managerOptions.map((managerOpt) => (
+                        <SelectItem key={managerOpt.id} value={managerOpt.id}>
+                          {managerOpt.name}
                         </SelectItem>
                       ))}
                     </SelectContent>
@@ -638,9 +669,9 @@ export default function UsersPage() {
                     if (value === "all_managers") {
                       table.getColumn("manager")?.setFilterValue(undefined);
                     } else if (value === "no_manager") {
-                      table.getColumn("manager")?.setFilterValue("null");
+                      table.getColumn("manager")?.setFilterValue("null"); 
                     } else {
-                      table.getColumn("manager")?.setFilterValue(value);
+                      table.getColumn("manager")?.setFilterValue(value); 
                     }
                   }}
                 >
@@ -650,17 +681,19 @@ export default function UsersPage() {
                         const filterValue = table.getColumn("manager")?.getFilterValue() as string;
                         if (!filterValue) return "All Managers";
                         if (filterValue === "null") return "No Manager";
-                        const manager = managers.find(m => m.id === filterValue);
-                        return manager ? manager.name : "All Managers";
+                        // Find name from the fetched manager options list
+                        const manager = managerOptions.find(m => m.id === filterValue);
+                        return manager ? manager.name : "All Managers"; // Display selected manager name
                       })()}
                     </SelectValue>
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="all_managers">All Managers</SelectItem>
                     <SelectItem value="no_manager">No Manager</SelectItem>
-                    {managers.map((manager) => (
-                      <SelectItem key={manager.id} value={manager.id}>
-                        {manager.name}
+                    {/* Use managerOptions for the filter list */}
+                    {managerOptions.map((managerOpt) => (
+                      <SelectItem key={managerOpt.id} value={managerOpt.id}>
+                        {managerOpt.name}
                       </SelectItem>
                     ))}
                   </SelectContent>

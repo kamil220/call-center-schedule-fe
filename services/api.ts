@@ -141,19 +141,23 @@ export const usersApi = {
   getUsers: (params?: UserListParamsDto): Promise<PaginatedResponse<UserDto>> => {
     // Convert params to URL query string
     const queryParams = new URLSearchParams();
-    
+
     if (params) {
       Object.entries(params).forEach(([key, value]) => {
         if (value !== undefined) {
-          // Ensure boolean false is converted to 'false' string
-          queryParams.append(key, String(value));
+          // Special handling for the roles array
+          if (key === 'roles' && Array.isArray(value)) {
+            value.forEach(role => queryParams.append('roles[]', role));
+          } else {
+            queryParams.append(key, String(value));
+          }
         }
       });
     }
-    
+
     const queryString = queryParams.toString();
     const endpoint = `/users${queryString ? `?${queryString}` : ''}`;
-    
+
     // API returns PaginatedResponse of UserDto
     return api.get<PaginatedResponse<UserDto>>(endpoint);
   },
