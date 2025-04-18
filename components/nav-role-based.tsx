@@ -59,12 +59,12 @@ export function NavRoleBased() {
 
   const administracjaMenuItems = [
     {
-      title: "Użytkownicy",
+      title: "Users",
       url: "/dashboard/users",
       icon: IconUsers,
     },
     {
-      title: "Ustawienia",
+      title: "Settings",
       url: "/admin/settings",
       icon: IconSettings,
     },

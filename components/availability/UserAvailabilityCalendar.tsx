@@ -1,21 +1,32 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Calendar } from "@/components/ui/calendar";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { cn } from "@/lib/utils";
+import { isHoliday, getHolidayName } from "@/lib/holidays";
 import type { DateRange } from "react-day-picker";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 
-type AvailabilityStatus = 'available' | 'unavailable' | 'vacation' | 'sick_leave';
+type AvailabilityStatus = 'available' | 'unavailable' | 'vacation' | 'sick_leave' | 'holiday';
 
 interface TimeSlot {
   date: Date;
   status: AvailabilityStatus;
   startTime?: string;
   endTime?: string;
+  holidayName?: string;
 }
+
+interface HolidaySlot {
+  date: Date;
+  status: 'holiday';
+  holidayName: string | null;
+}
+
+type CalendarSlot = TimeSlot | HolidaySlot;
 
 // Mock data - replace with API call later
 const mockAvailability: TimeSlot[] = [
@@ -66,10 +77,15 @@ const statusStyles = {
   unavailable: "bg-gray-50 hover:bg-gray-100 text-gray-500",
   vacation: "bg-orange-50 hover:bg-orange-100 text-orange-700",
   sick_leave: "bg-red-50 hover:bg-red-100 text-red-700",
+  holiday: "bg-blue-50 hover:bg-blue-100 text-blue-700",
   default: "bg-white hover:bg-gray-50",
 };
 
-export function UserAvailabilityCalendar() {
+interface UserAvailabilityCalendarProps {
+  userId: string;
+}
+
+export function UserAvailabilityCalendar({ userId }: UserAvailabilityCalendarProps) {
   const [selectedRange, setSelectedRange] = useState<DateRange | undefined>();
   const [availability, setAvailability] = useState<TimeSlot[]>(mockAvailability);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
@@ -82,7 +98,15 @@ export function UserAvailabilityCalendar() {
     return `${hour}:00`;
   });
 
-  const getAvailabilityForDate = (date: Date) => {
+  const getAvailabilityForDate = (date: Date): CalendarSlot | undefined => {
+    // Check if it's a holiday first
+    if (isHoliday(date)) {
+      return {
+        date,
+        status: 'holiday',
+        holidayName: getHolidayName(date)
+      };
+    }
     return availability.find(
       (slot) => slot.date.toDateString() === date.toDateString()
     );
@@ -152,6 +176,14 @@ export function UserAvailabilityCalendar() {
   };
 
   const handleDateSelect = (range: DateRange | undefined) => {
+    // Don't allow selection of holidays
+    if (range?.from && isHoliday(range.from)) {
+      return;
+    }
+    if (range?.to && isHoliday(range.to)) {
+      return;
+    }
+
     // If clicking the same day that's already selected as a single day, clear the selection
     if (selectedRange?.from && selectedRange?.to && 
         range?.from && range?.to &&
@@ -171,6 +203,11 @@ export function UserAvailabilityCalendar() {
     setSelectedRange(range);
   };
 
+  useEffect(() => {
+    // TODO: Fetch user availability data using userId
+    // For now using mock data
+  }, [userId]);
+
   return (
     <div className="space-y-6">
       <Calendar
@@ -178,6 +215,7 @@ export function UserAvailabilityCalendar() {
         selected={selectedRange?.from}
         onSelect={(date) => {
           if (date) {
+            if (isHoliday(date)) return; // Don't allow selection of holidays
             setSelectedRange({ from: date, to: date });
             setIsDialogOpen(true);
           }
@@ -208,7 +246,7 @@ export function UserAvailabilityCalendar() {
             const isToday = date.toDateString() === new Date().toDateString();
             const status = slot?.status || 'unavailable';
             
-            return (
+            const dayContent = (
               <div
                 className={cn(
                   "h-14 w-full flex flex-col justify-center items-center rounded-lg transition-colors",
@@ -221,13 +259,36 @@ export function UserAvailabilityCalendar() {
                   "font-medium",
                   isToday && "text-primary"
                 )}>{date.getDate()}</div>
-                {status === 'available' && (
+                {status === 'available' && slot && 'startTime' in slot && 'endTime' in slot && (
                   <div className="text-[10px] font-medium mt-1">
-                    {slot?.startTime}-{slot?.endTime}
+                    {slot.startTime}-{slot.endTime}
+                  </div>
+                )}
+                {status === 'holiday' && (
+                  <div className="text-[10px] font-medium mt-1">
+                    Holidays
                   </div>
                 )}
               </div>
             );
+
+            // Wrap in tooltip if it's a holiday
+            if (status === 'holiday' && slot?.holidayName) {
+              return (
+                <TooltipProvider>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      {dayContent}
+                    </TooltipTrigger>
+                    <TooltipContent>
+                      <p>{slot.holidayName}</p>
+                    </TooltipContent>
+                  </Tooltip>
+                </TooltipProvider>
+              );
+            }
+
+            return dayContent;
           },
         }}
       />

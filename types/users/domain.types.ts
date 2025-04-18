@@ -86,6 +86,98 @@ export interface ExtendedUser extends Omit<User, 'firstName' | 'lastName' | 'ful
   managerName?: string | null; // Name of the manager for display purposes
 }
 
+// Employment type enum
+export enum EmploymentType {
+  UOP = 'UOP', // Umowa o pracę
+  B2B = 'B2B',
+  UZ = 'UZ', // Umowa zlecenie
+}
+
+// Employment details interface
+export interface EmploymentDetails {
+  type: EmploymentType;
+  requiredHours?: number; // Required for B2B and UZ
+  vacationDays?: number; // Required for UOP
+  vacationDaysUsed?: number; // Required for UOP
+}
+
+// Leave request status
+export enum LeaveRequestStatus {
+  PENDING = 'PENDING',
+  APPROVED = 'APPROVED',
+  REJECTED = 'REJECTED'
+}
+
+// Leave request type
+export interface LeaveRequest {
+  id: string;
+  startDate: string; // ISO date
+  endDate: string; // ISO date
+  type: 'vacation' | 'sick_leave' | 'other';
+  status: LeaveRequestStatus;
+  comment?: string;
+  responseComment?: string;
+  respondedBy?: string;
+  respondedAt?: string;
+}
+
+// Work line types
+export enum WorkLine {
+  CUSTOMER_SERVICE = 'Customer Service',
+  SALES = 'Sales',
+  TECHNICAL = 'Technical',
+  ADMIN = 'Administration',
+  SUPPORT = 'Support'
+}
+
+// Weekly schedule entry
+export interface WeeklyScheduleEntry {
+  dayOfWeek: number; // 0-6, where 0 is Sunday
+  startTime: string;
+  endTime: string;
+  workLine: WorkLine;
+  location?: string;
+}
+
+// Skill category
+export enum SkillCategory {
+  SALES = 'sales',
+  CUSTOMER_SERVICE = 'customer_service',
+  TECHNICAL = 'technical',
+  ADMIN = 'admin'
+}
+
+// Skill tag
+export interface SkillTag {
+  id: string;
+  name: string;
+  category: SkillCategory;
+}
+
+// User skill
+export interface UserSkill {
+  skillTag: SkillTag;
+  rating: Rating;
+}
+
+// Evaluation criteria
+export interface EvaluationCriteria {
+  managerRating: Rating;
+  customerSatisfaction: Rating;
+  confidence: Rating;
+  knowledge: Rating;
+  experience: Rating;
+}
+
+// Evaluation entry
+export interface EvaluationEntry {
+  id: string;
+  date: string; // ISO date
+  evaluator: string;
+  criteria: EvaluationCriteria;
+  note: string;
+}
+
 // Employee type with all the extended information
 export interface Employee extends ExtendedUser {
   specializations: SpecializationTag[];
@@ -97,4 +189,9 @@ export interface Employee extends ExtendedUser {
   phoneNumber?: string;
   address?: string;
   emergencyContact?: string;
+  employmentDetails: EmploymentDetails;
+  leaveRequests: LeaveRequest[];
+  weeklySchedule: WeeklyScheduleEntry[];
+  skills: UserSkill[];
+  evaluations: EvaluationEntry[];
 } 
