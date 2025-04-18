@@ -137,6 +137,7 @@ export interface WeeklyScheduleEntry {
   endTime: string;
   workLine: WorkLine;
   location?: string;
+  date: string; // ISO date string for specific date
 }
 
 // Skill category

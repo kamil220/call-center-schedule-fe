@@ -64,20 +64,36 @@ export function WeeklySchedule({ schedule }: WeeklyScheduleProps) {
 
   const weekDays = Array.from({ length: 7 }, (_, i) => addDays(startOfCurrentWeek, i));
 
-  // Group schedule entries by day and work line
-  const scheduleBlocks = schedule.reduce<Record<number, Record<WorkLine, WeeklyScheduleEntry[]>>>(
-    (acc, entry) => {
-      if (!acc[entry.dayOfWeek]) {
-        acc[entry.dayOfWeek] = {} as Record<WorkLine, WeeklyScheduleEntry[]>;
-      }
-      if (!acc[entry.dayOfWeek][entry.workLine]) {
-        acc[entry.dayOfWeek][entry.workLine] = [];
-      }
-      acc[entry.dayOfWeek][entry.workLine].push(entry);
-      return acc;
-    },
-    {}
-  );
+  // Update the function to check if a schedule entry belongs to the current week
+  const isScheduleEntryInCurrentWeek = (entry: WeeklyScheduleEntry) => {
+    const entryDate = new Date(entry.date);
+    const weekStart = startOfWeek(currentDate, { weekStartsOn: 1 });
+    const weekEnd = addDays(weekStart, 6);
+    return entryDate >= weekStart && entryDate <= weekEnd;
+  };
+
+  // Update scheduleBlocks to use dates instead of dayOfWeek
+  const scheduleBlocks = schedule
+    .filter(isScheduleEntryInCurrentWeek)
+    .reduce<Record<number, Record<WorkLine, WeeklyScheduleEntry[]>>>(
+      (acc, entry) => {
+        // Get the day index (0-6) from the entry's date
+        const entryDate = new Date(entry.date);
+        const dayIndex = entryDate.getDay();
+        // Convert Sunday (0) to 7 to match our calendar display
+        const adjustedDayIndex = dayIndex === 0 ? 7 : dayIndex;
+
+        if (!acc[adjustedDayIndex]) {
+          acc[adjustedDayIndex] = {} as Record<WorkLine, WeeklyScheduleEntry[]>;
+        }
+        if (!acc[adjustedDayIndex][entry.workLine]) {
+          acc[adjustedDayIndex][entry.workLine] = [];
+        }
+        acc[adjustedDayIndex][entry.workLine].push(entry);
+        return acc;
+      },
+      {}
+    );
 
   const getWorkBlockStyle = (entries: WeeklyScheduleEntry[]) => {
     const startHour = Math.min(...entries.map(e => parseInt(e.startTime.split(":")[0])));
