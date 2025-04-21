@@ -78,13 +78,11 @@ export const useAuthStore = create<AuthState & AuthActions>()(
                 isAuthenticated: true,
                 isLoading: false,
               });
-              console.log('[Auth Store] User set after login:', get().user);
             } else {
               set({
                 error: result.error || 'Login failed',
                 isLoading: false,
               });
-              console.log('[Auth Store] Login failed, user state:', get().user);
             }
           } catch (error) {
             set({
@@ -125,10 +123,6 @@ export const useAuthStore = create<AuthState & AuthActions>()(
           const user = get().user;
           if (!user) return false;
           
-          console.log('[Auth Store] hasRole - User:', user);
-          console.log('[Auth Store] hasRole - Required role:', role);
-          console.log('[Auth Store] hasRole - User role:', user.role);
-          
           // Direct role check - compare the user role to the required role
           // Return true if the user role matches or is higher privilege than the required role
           // ADMIN > TEAM_MANAGER > PLANNER > AGENT
@@ -158,7 +152,6 @@ export const useAuthStore = create<AuthState & AuthActions>()(
 
           // Fall back to direct comparison if none of the above apply
           const result = user.role === role;
-          console.log('[Auth Store] hasRole - Result:', result);
           return result;
         },
         
