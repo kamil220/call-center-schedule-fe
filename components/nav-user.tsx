@@ -1,10 +1,8 @@
 "use client"
 
 import {
-  IconCreditCard,
   IconDotsVertical,
   IconLogout,
-  IconNotification,
   IconUserCircle,
 } from "@tabler/icons-react"
 
@@ -29,7 +27,6 @@ import {
   useSidebar,
 } from "@/components/ui/sidebar"
 import { Badge } from "@/components/ui/badge"
-import { ApiUser } from "@/types"
 import { useUser, useAuthActions } from "@/store/auth.store"
 
 export function NavUser() {
@@ -39,14 +36,8 @@ export function NavUser() {
 
   if (!user) return null
 
-  // Convert user to ApiUser to access roles array
-  const apiUser = user as unknown as ApiUser
   const initials = `${user.firstName?.[0] || ''}${user.lastName?.[0] || ''}`
   
-  // Get role name from API roles
-  const roleName = apiUser.roles?.length > 0
-    ? apiUser.roles[0].replace('ROLE_', '')
-    : 'User'
 
   return (
     <SidebarMenu>
@@ -67,7 +58,7 @@ export function NavUser() {
                 <div className="flex items-center gap-2">
                   <span className="truncate font-medium">{user.fullName}</span>
                   <Badge variant="outline" className="text-xs">
-                    {roleName}
+                    {user.role}
                   </Badge>
                 </div>
                 <span className="text-muted-foreground truncate text-xs">
@@ -95,7 +86,7 @@ export function NavUser() {
                   <div className="flex items-center gap-2">
                     <span className="truncate font-medium">{user.fullName}</span>
                     <Badge variant="outline" className="text-xs">
-                      {roleName}
+                      {user.role}
                     </Badge>
                   </div>
                   <span className="text-muted-foreground truncate text-xs">

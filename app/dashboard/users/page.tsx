@@ -13,6 +13,7 @@ import { format } from "date-fns";
 import { Pagination } from "@/components/ui/pagination";
 import { toast } from "sonner";
 import { CreateUserRequestDto, UserRoleApi } from "@/types/users/api.types";
+import { useRouter } from "next/navigation";
 
 // Data table imports
 import {
@@ -47,6 +48,7 @@ interface ManagerOption {
 }
 
 export default function UsersPage() {
+  const router = useRouter();
   const [sorting, setSorting] = useState<SortingState>([]);
   const [columnFilters, setColumnFilters] = useState<ColumnFiltersState>([]);
   const [globalFilter, setGlobalFilter] = useState('');
@@ -749,6 +751,8 @@ export default function UsersPage() {
                       <TableRow
                         key={row.id}
                         data-state={row.getIsSelected() && "selected"}
+                        className="cursor-pointer hover:bg-muted/50"
+                        onClick={() => router.push(`/dashboard/users/${row.original.id}`)}
                       >
                         {row.getVisibleCells().map((cell) => (
                           <TableCell key={cell.id} className="px-6">
