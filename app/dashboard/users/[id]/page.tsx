@@ -1,5 +1,6 @@
 "use client";
 
+import React from "react";
 import { UserAvailabilityCalendar } from "@/components/availability/UserAvailabilityCalendar";
 import { EmploymentInfo } from "@/components/availability/EmploymentInfo";
 import { LeaveRequests } from "@/components/availability/LeaveRequests";
@@ -227,7 +228,11 @@ const mockEvaluations = [
   },
 ];
 
-export default function UserAvailabilityPage({ params }: { params: { id: string } }) {
+export default function UserAvailabilityPage({ params }: { params: Promise<{ id: string }> }) {
+  // Unwrap params with React.use()
+  const unwrappedParams = React.use(params);
+  const userId = unwrappedParams.id;
+  
   const [employmentDetails] = useState(mockEmploymentDetails);
   const [leaveRequests] = useState(mockLeaveRequests);
   const [weeklySchedule] = useState(mockWeeklySchedule);
@@ -237,7 +242,7 @@ export default function UserAvailabilityPage({ params }: { params: { id: string 
   useEffect(() => {
     // TODO: Fetch all data from API
     // For now using mock data
-  }, [params.id]);
+  }, [userId]);
 
   return (
     <>
@@ -250,7 +255,7 @@ export default function UserAvailabilityPage({ params }: { params: { id: string 
                 {/* Left column - Calendar and Weekly Schedule */}
                 <div className="col-span-7 space-y-6">
                   <Card className="p-4">
-                    <UserAvailabilityCalendar userId={params.id} />
+                    <UserAvailabilityCalendar userId={userId} />
                   </Card>
                   <WeeklySchedule schedule={weeklySchedule} />
                 </div>
