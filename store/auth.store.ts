@@ -1,6 +1,6 @@
 import { create } from 'zustand';
 import { devtools, persist } from 'zustand/middleware';
-import { User, UserRole, ApiUser } from '@/types';
+import { User, UserRole } from '@/types';
 import { authService } from '@/services/auth.service';
 import { getUserFromCookies, getTokenFromCookies } from '@/lib/cookies';
 import { setLogoutHandler } from '@/services/api';
@@ -35,24 +35,6 @@ interface AuthActions {
   // Add helper action for role checking
   hasRole: (role: UserRole) => boolean;
 }
-
-// Helper function to check if the user has the required role based on raw API roles array
-const hasApiRole = (apiRoles: string[] | undefined, requiredRole: UserRole): boolean => {
-  if (!apiRoles || !Array.isArray(apiRoles) || apiRoles.length === 0) return false;
-  
-  // Map the requiredRole enum back to the API role string format
-  let requiredApiRole: string;
-  switch (requiredRole) {
-    case UserRole.ADMIN: requiredApiRole = 'ROLE_ADMIN'; break;
-    case UserRole.PLANNER: requiredApiRole = 'ROLE_PLANNER'; break;
-    case UserRole.TEAM_MANAGER: requiredApiRole = 'ROLE_TEAM_MANAGER'; break;
-    case UserRole.AGENT: requiredApiRole = 'ROLE_AGENT'; break;
-    default: return false;
-  }
-  
-  // Check if the API roles array includes the required role
-  return apiRoles.includes(requiredApiRole);
-};
 
 export const useAuthStore = create<AuthState & AuthActions>()(
   devtools(
