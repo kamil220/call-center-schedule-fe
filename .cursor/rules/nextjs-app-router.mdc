@@ -1,0 +1,38 @@
+---
+description: 
+globs: 
+alwaysApply: true
+---
+# Next.js App Router Guidelines
+
+## Structure
+
+This application uses Next.js App Router structure under the [app/](mdc:app) directory:
+
+- Each route (page) has its own folder with a `page.tsx` file
+- Layouts are defined in `layout.tsx` files
+- Global styles are in [app/globals.css](mdc:app/globals.css)
+- The root layout is in [app/layout.tsx](mdc:app/layout.tsx)
+
+## Key Routes
+
+- [app/page.tsx](mdc:app/page.tsx) - Home page
+- [app/login/](mdc:app/login) - Authentication page
+- [app/dashboard/](mdc:app/dashboard) - Dashboard pages
+- [app/forbidden/](mdc:app/forbidden) - Access denied page
+
+## Authentication & Authorization
+
+The application includes several components for handling authentication and authorization:
+
+- [components/auth-provider.tsx](mdc:components/auth-provider.tsx) - Auth context provider
+- [components/protected-route.tsx](mdc:components/protected-route.tsx) - Route protection
+- [components/role-guard.tsx](mdc:components/role-guard.tsx) - Role-based access control
+- [components/require-role.tsx](mdc:components/require-role.tsx) - Role requirement enforcement
+
+## Best Practices
+
+- Avoid placing business logic directly in `app/` routes
+- Move logic to hooks, services, or components
+- Use layouts for shared UI between related routes
+- Keep page components simple and focused on layout composition

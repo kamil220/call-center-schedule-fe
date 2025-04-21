@@ -1,0 +1,28 @@
+---
+description: 
+globs: 
+alwaysApply: true
+---
+# Project Structure Guide
+
+## Directory Structure
+
+This Next.js application follows a well-organized structure:
+
+- [app/](mdc:app) - Next.js App Router pages and layouts
+- [components/](mdc:components) - Reusable UI components
+  - [components/ui/](mdc:components/ui) - shadcn/ui base components
+- [hooks/](mdc:hooks) - Custom React hooks
+- [services/](mdc:services) - API and business logic services
+- [store/](mdc:store) - State management (Zustand)
+- [lib/](mdc:lib) - Utility functions and helpers
+- [types/](mdc:types) - TypeScript type definitions
+- [public/](mdc:public) - Static assets
+
+## Key Files
+
+- [package.json](mdc:package.json) - Project dependencies and scripts
+- [tsconfig.json](mdc:tsconfig.json) - TypeScript configuration
+- [components.json](mdc:components.json) - shadcn/ui configuration
+- [app/layout.tsx](mdc:app/layout.tsx) - Root layout component
+- [app/globals.css](mdc:app/globals.css) - Global CSS styles

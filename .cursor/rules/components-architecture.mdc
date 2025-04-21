@@ -1,0 +1,34 @@
+---
+description: 
+globs: 
+alwaysApply: true
+---
+# Component Architecture
+
+## UI Components
+
+The application uses [shadcn/ui](mdc:https:/ui.shadcn.com/docs/tailwind-v4) components for a consistent design system. These components are located in [components/ui/](mdc:components/ui).
+
+Key patterns:
+- Components use Tailwind CSS v4 for styling
+- Always add new shadcn/ui components via the CLI (`npx shadcn@latest add <component_name>`)
+- Customize existing shadcn/ui components by modifying files in `components/ui/`
+
+## Component Guidelines
+
+- Use **PascalCase** for component files (e.g., `LoginForm.tsx`)
+- Build components to be reusable and composable
+- Keep UI components "dumb" - move business logic to hooks and services
+- Use data-slot attributes for styling primitives
+
+## Notable Components
+
+- [components/site-header.tsx](mdc:components/site-header.tsx) - Main application header
+- [components/sidebar.tsx](mdc:components/sidebar.tsx) - Application sidebar navigation
+- [components/login-form.tsx](mdc:components/login-form.tsx) - Authentication form
+- [components/data-table.tsx](mdc:components/data-table.tsx) - Reusable data table component
+
+## Testing
+
+Component tests are located in `__tests__` directories adjacent to the components they test.
+Use Jest and React Testing Library for component testing.

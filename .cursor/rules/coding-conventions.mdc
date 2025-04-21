@@ -1,0 +1,53 @@
+---
+description: 
+globs: 
+alwaysApply: true
+---
+# Coding Conventions & Best Practices
+
+## Core Principles
+
+- **KISS**: Keep code simple and avoid overengineering
+- **DRY**: Don't repeat yourself - create reusable components, hooks, and utilities
+- **Separation of Concerns**: Separate UI from business logic
+- **Langague**: Use only English in your code and avoid unnecessary comments
+
+## TypeScript Usage
+
+- Use TypeScript throughout the codebase
+- Use `interface` for object shapes
+- Use `type` for unions, intersections, and primitive type aliases
+- Define reusable types in the [types/](mdc:types) directory
+
+## File Structure
+
+- Use **PascalCase** for component files (e.g., `LoginForm.tsx`)
+- Use **camelCase** for non-component files (e.g., `useLoginForm.ts`, `apiClient.ts`)
+- Group related files by functionality (components, hooks, services)
+
+## Import Order
+
+1. React imports
+2. External libraries
+3. Absolute internal imports (using `@/` paths)
+4. Relative imports
+
+## Styling
+
+- Use Tailwind CSS v4 for styling
+- Apply utility classes directly to elements
+- Use the `@theme` directive for theming as per Tailwind v4 documentation
+- Follow shadcn/ui v4 conventions for styling primitives with data-slot attributes
+
+## Testing
+
+- Write unit tests for hooks, services, and components
+- Place test files in `__tests__` directories
+- Use `.test.tsx` or `.test.ts` file extensions
+- Use Jest and React Testing Library
+
+## State Management
+
+- Use React's built-in hooks for local state
+- Use Zustand for complex global state
+- Keep global state minimal and focused

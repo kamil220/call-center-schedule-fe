@@ -1,0 +1,42 @@
+---
+description: 
+globs: 
+alwaysApply: true
+---
+# State Management & Hooks
+
+## State Management Approach
+
+This application uses a multi-layered approach to state management:
+
+1. **Local Component State**: Use React's `useState` and `useReducer` hooks for component-specific state
+2. **Shared Context**: Use `useContext` for simple shared state between components
+3. **Global State**: Use [Zustand](mdc:https:/zustand-demo.pmnd.rs) for complex global state management
+
+## Zustand Stores
+
+Zustand stores are located in the [store/](mdc:store) directory:
+
+- [store/auth.store.ts](mdc:store/auth.store.ts) - Authentication and user state management
+
+## Custom Hooks
+
+Custom hooks encapsulate reusable logic and are located in the [hooks/](mdc:hooks) directory:
+
+- [hooks/use-login-form.ts](mdc:hooks/use-login-form.ts) - Login form logic and validation
+- [hooks/use-role-check.ts](mdc:hooks/use-role-check.ts) - User role verification
+- [hooks/use-mobile.ts](mdc:hooks/use-mobile.ts) - Mobile device detection
+
+## Services
+
+Services handle API interactions and business logic:
+
+- [services/api.ts](mdc:services/api.ts) - API client for backend communication
+- [services/auth.service.ts](mdc:services/auth.service.ts) - Authentication service
+
+## Best Practices
+
+- Keep business logic in hooks and services, not in components
+- Use TypeScript for type safety
+- Write unit tests for hooks and services
+- Follow the naming convention: `use<Feature>` for hooks and `<feature>.service.ts` for services
