@@ -3,7 +3,7 @@
  */
 
 import { api } from './api';
-import { Holiday } from '@/types';
+import { Holiday, UserAvailability } from '@/types';
 
 // Get country from environment variable
 const DEFAULT_COUNTRY = process.env.NEXT_PUBLIC_COUNTRY || 'PL';
@@ -21,6 +21,18 @@ export const calendarApi = {
    */
   getHolidays: (year: number, country: string = DEFAULT_COUNTRY): Promise<Holiday[]> => {
     return api.get<Holiday[]>(`/v1/calendar/holidays/${year}?country=${country}`);
+  },
+
+  /**
+   * Get user availability for a date range
+   * 
+   * @param userId - The user ID to fetch availability for
+   * @param startDate - Start date in YYYY-MM-DD format
+   * @param endDate - End date in YYYY-MM-DD format
+   * @returns Promise with array of user availabilities
+   */
+  getUserAvailability: (userId: string, startDate: string, endDate: string): Promise<UserAvailability[]> => {
+    return api.get<UserAvailability[]>(`/work-schedule/availabilities?userId=${userId}&startDate=${startDate}&endDate=${endDate}`);
   }
 };
 
@@ -79,6 +91,18 @@ export const calendarService = {
     pendingRequests.set(cacheKey, requestPromise);
     
     return requestPromise;
+  },
+  
+  /**
+   * Get user availability for a date range
+   * 
+   * @param userId - The user ID to fetch availability for
+   * @param startDate - Start date in YYYY-MM-DD format
+   * @param endDate - End date in YYYY-MM-DD format
+   * @returns Promise with array of user availabilities
+   */
+  getUserAvailability: (userId: string, startDate: string, endDate: string): Promise<UserAvailability[]> => {
+    return calendarApi.getUserAvailability(userId, startDate, endDate);
   },
   
   /**
