@@ -15,5 +15,8 @@ export * from './auth/store.types';
 export * from './users/api.types'; // Includes ApiUser interface
 export * from './users/domain.types';
 
+// Re-export calendar types
+export * from './calendar/api.types';
+
 // Re-export mappers
 export * from './mappers'; 

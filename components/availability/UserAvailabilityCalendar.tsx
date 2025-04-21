@@ -6,9 +6,10 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { cn } from "@/lib/utils";
-import { isHoliday, getHolidayName } from "@/lib/holidays";
+import { calendarService } from "@/services/calendar.service";
 import type { DateRange } from "react-day-picker";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { Holiday } from "@/types";
 
 type AvailabilityStatus = 'available' | 'unavailable' | 'vacation' | 'sick_leave' | 'holiday';
 
@@ -92,21 +93,75 @@ export function UserAvailabilityCalendar({ userId }: UserAvailabilityCalendarPro
   const [selectedStartTime, setSelectedStartTime] = useState("09:00");
   const [selectedEndTime, setSelectedEndTime] = useState("17:00");
   const [selectedStatus, setSelectedStatus] = useState<AvailabilityStatus>('available');
-
+  const [holidays, setHolidays] = useState<Holiday[]>([]);
+  const [isLoadingHolidays, setIsLoadingHolidays] = useState(false);
+  const [currentYear, setCurrentYear] = useState(new Date().getFullYear());
+  const [currentMonth, setCurrentMonth] = useState<Date>(new Date());
+  
   const timeOptions = Array.from({ length: 24 }, (_, i) => {
     const hour = i.toString().padStart(2, "0");
     return `${hour}:00`;
   });
 
-  const getAvailabilityForDate = (date: Date): CalendarSlot | undefined => {
-    // Check if it's a holiday first
-    if (isHoliday(date)) {
+  // Fetch holidays when the year changes
+  useEffect(() => {
+    async function fetchHolidays() {
+      setIsLoadingHolidays(true);
+      try {
+        const holidayData = await calendarService.getHolidays(currentYear);
+        console.log(`Loaded ${holidayData.length} holidays for year ${currentYear}:`, holidayData);
+        setHolidays(holidayData);
+      } catch (error) {
+        console.error("Failed to fetch holidays:", error);
+      } finally {
+        setIsLoadingHolidays(false);
+      }
+    }
+
+    fetchHolidays();
+  }, [currentYear]);
+
+  // Check if a date is a holiday based on the API data
+  const checkIfHoliday = (date: Date): HolidaySlot | null => {
+    if (date.getFullYear() !== currentYear) {
+      return null;
+    }
+    
+    const formattedMonth = (date.getMonth() + 1).toString().padStart(2, '0');
+    const formattedDay = date.getDate().toString().padStart(2, '0');
+    const formattedDate = `${date.getFullYear()}-${formattedMonth}-${formattedDay}`;
+    
+    // Find the matching holiday
+    const holiday = holidays.find(h => h.date === formattedDate);
+    
+    if (holiday) {
       return {
         date,
         status: 'holiday',
-        holidayName: getHolidayName(date)
+        holidayName: holiday.description
       };
     }
+    
+    return null;
+  };
+
+  const getAvailabilityForDate = (date: Date): CalendarSlot | undefined => {
+    // Check if it's a holiday first using the API data
+    const holidaySlot = checkIfHoliday(date);
+    if (holidaySlot) {
+      return holidaySlot;
+    }
+    
+    // Fallback to sync check during loading
+    if (isLoadingHolidays && date.getFullYear() === currentYear && isCommonFixedHoliday(date)) {
+      return {
+        date,
+        status: 'holiday',
+        holidayName: getCommonHolidayName(date)
+      };
+    }
+    
+    // Check availability
     return availability.find(
       (slot) => slot.date.toDateString() === date.toDateString()
     );
@@ -120,14 +175,18 @@ export function UserAvailabilityCalendar({ userId }: UserAvailabilityCalendarPro
     const endDate = selectedRange.to || selectedRange.from;
 
     while (currentDate <= endDate) {
-      newSlots.push({
-        date: new Date(currentDate),
-        status: selectedStatus,
-        ...(selectedStatus === 'available' && {
-          startTime: selectedStartTime,
-          endTime: selectedEndTime,
-        }),
-      });
+      // Skip holidays
+      const holidaySlot = checkIfHoliday(currentDate);
+      if (!holidaySlot) {
+        newSlots.push({
+          date: new Date(currentDate),
+          status: selectedStatus,
+          ...(selectedStatus === 'available' && {
+            startTime: selectedStartTime,
+            endTime: selectedEndTime,
+          }),
+        });
+      }
       currentDate.setDate(currentDate.getDate() + 1);
     }
 
@@ -142,6 +201,26 @@ export function UserAvailabilityCalendar({ userId }: UserAvailabilityCalendarPro
 
     setSelectedRange(undefined);
     setIsDialogOpen(false);
+  };
+
+  // Handle month/year navigation to load holidays for the new year
+  const handleMonthChange = (date: Date) => {
+    setCurrentMonth(date);
+    const year = date.getFullYear();
+    if (year !== currentYear) {
+      setCurrentYear(year);
+    }
+  };
+  
+  // Go to today's date in calendar
+  const goToToday = () => {
+    const today = new Date();
+    setCurrentMonth(today);
+    
+    // If year changed, update it to fetch new holidays
+    if (today.getFullYear() !== currentYear) {
+      setCurrentYear(today.getFullYear());
+    }
   };
 
   const calculateSummary = () => {
@@ -176,12 +255,22 @@ export function UserAvailabilityCalendar({ userId }: UserAvailabilityCalendarPro
   };
 
   const handleDateSelect = (range: DateRange | undefined) => {
-    // Don't allow selection of holidays
-    if (range?.from && isHoliday(range.from)) {
+    if (!range?.from) {
+      setSelectedRange(undefined);
       return;
     }
-    if (range?.to && isHoliday(range.to)) {
+
+    // Don't allow selection of holidays
+    const fromHoliday = checkIfHoliday(range.from);
+    if (fromHoliday) {
       return;
+    }
+
+    if (range.to) {
+      const toHoliday = checkIfHoliday(range.to);
+      if (toHoliday) {
+        return;
+      }
     }
 
     // If clicking the same day that's already selected as a single day, clear the selection
@@ -208,18 +297,74 @@ export function UserAvailabilityCalendar({ userId }: UserAvailabilityCalendarPro
     // For now using mock data
   }, [userId]);
 
+  // Helper function to check if a date is a common fixed holiday
+  // Used as a fallback when API data is loading
+  const isCommonFixedHoliday = (date: Date): boolean => {
+    const month = date.getMonth();
+    const day = date.getDate();
+    
+    // Check only major fixed holidays
+    return (
+      (month === 0 && day === 1) ||  // New Year
+      (month === 0 && day === 6) ||  // Epiphany
+      (month === 4 && day === 1) ||  // Labor Day
+      (month === 4 && day === 3) ||  // Constitution Day
+      (month === 7 && day === 15) || // Assumption
+      (month === 10 && day === 1) || // All Saints Day
+      (month === 10 && day === 11) || // Independence Day
+      (month === 11 && day === 25) || // Christmas Day
+      (month === 11 && day === 26)    // Second Day of Christmas
+    );
+  };
+  
+  // Helper function to get holiday name for common fixed holidays
+  const getCommonHolidayName = (date: Date): string | null => {
+    if (!isCommonFixedHoliday(date)) return null;
+    
+    const month = date.getMonth();
+    const day = date.getDate();
+    
+    if (month === 0 && day === 1) return 'Nowy Rok';
+    if (month === 0 && day === 6) return 'Święto Trzech Króli';
+    if (month === 4 && day === 1) return 'Święto Pracy';
+    if (month === 4 && day === 3) return 'Święto Konstytucji 3 Maja';
+    if (month === 7 && day === 15) return 'Wniebowzięcie Najświętszej Maryi Panny';
+    if (month === 10 && day === 1) return 'Wszystkich Świętych';
+    if (month === 10 && day === 11) return 'Święto Niepodległości';
+    if (month === 11 && day === 25) return 'Boże Narodzenie (pierwszy dzień)';
+    if (month === 11 && day === 26) return 'Boże Narodzenie (drugi dzień)';
+    
+    return 'Święto';
+  };
+
   return (
     <div className="space-y-6">
+      <div className="flex justify-between items-center mx-4 my-2">
+        <h2 className="text-2xl font-semibold">Your Availability Calendar</h2>
+        <Button 
+          variant="outline" 
+          size="sm"
+          onClick={goToToday}
+        >
+          Today
+        </Button>
+      </div>
+      
       <Calendar
         mode="single"
         selected={selectedRange?.from}
         onSelect={(date) => {
           if (date) {
-            if (isHoliday(date)) return; // Don't allow selection of holidays
+            // Don't allow selection of holidays
+            const holidaySlot = checkIfHoliday(date);
+            if (holidaySlot) return;
+            
             setSelectedRange({ from: date, to: date });
             setIsDialogOpen(true);
           }
         }}
+        month={currentMonth}
+        onMonthChange={handleMonthChange}
         className="w-full"
         classNames={{
           months: "w-full",
@@ -347,6 +492,7 @@ export function UserAvailabilityCalendar({ userId }: UserAvailabilityCalendarPro
                 mode="range"
                 selected={selectedRange}
                 onSelect={handleDateSelect}
+                onMonthChange={handleMonthChange}
                 disabled={(date) => date < new Date()}
                 className="border rounded-md p-3"
                 classNames={{
