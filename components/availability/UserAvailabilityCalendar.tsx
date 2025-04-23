@@ -1,43 +1,29 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { format, startOfMonth, endOfMonth } from "date-fns";
+import type { DateRange } from "react-day-picker";
+
 import { Calendar } from "@/components/ui/calendar";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { cn } from "@/lib/utils";
-import { calendarService } from "@/services/calendar.service";
-import type { DateRange } from "react-day-picker";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
-import { Holiday } from "@/types";
-import { format, parse, startOfMonth, endOfMonth } from "date-fns";
-import { Skeleton } from "@/components/ui/skeleton";
+import { Skeleton } from "@/components/ui/skeleton"; // Kept for summary shimmer
+import { CalendarShimmer } from "@/components/availability/CalendarShimmer";
 
-type AvailabilityStatus = 'available' | 'unavailable' | 'vacation' | 'sick_leave' | 'holiday';
+import { cn } from "@/lib/utils";
+import { formatDateForApi } from "@/lib/calendarUtils"; 
+import { calendarService } from "@/services/calendar.service";
+import type { Holiday, ScheduleEntry, AvailabilityMeta, LeaveMeta } from "@/types/calendar.types";
 
-interface TimeSlot {
-  id?: string;
-  date: Date;
-  status: AvailabilityStatus;
-  startTime?: string;
-  endTime?: string;
-  holidayName?: string;
-}
 
-interface HolidaySlot {
-  date: Date;
-  status: 'holiday';
-  holidayName: string | null;
-}
-
-type CalendarSlot = TimeSlot | HolidaySlot;
-
+// Simplified status styles for DayContent background
 const statusStyles = {
   available: "bg-green-50 hover:bg-green-100 text-green-700",
-  unavailable: "bg-gray-50 hover:bg-gray-100 text-gray-500",
-  vacation: "bg-orange-50 hover:bg-orange-100 text-orange-700",
-  sick_leave: "bg-red-50 hover:bg-red-100 text-red-700",
+  leave: "bg-yellow-50 hover:bg-yellow-100 text-yellow-700", 
   holiday: "bg-blue-50 hover:bg-blue-100 text-blue-700",
+  unavailable: "bg-gray-50 hover:bg-gray-100 text-gray-500",
   default: "bg-white hover:bg-gray-50",
 };
 
@@ -45,76 +31,29 @@ interface UserAvailabilityCalendarProps {
   userId: string;
 }
 
-// Loading shimmer for calendar cells
-function CalendarShimmer() {
-  // 7 days per row, typically 5-6 rows in a month view
-  const rows = 6;
-  const columns = 7;
-  
-  return (
-    <div className="space-y-4">
-      {/* Month header shimmer */}
-      <div className="flex justify-center">
-        <Skeleton className="h-8 w-32" />
-      </div>
-      
-      {/* Day headers */}
-      <div className="grid grid-cols-7 gap-2 mb-2">
-        {Array.from({ length: columns }).map((_, i) => (
-          <Skeleton key={`header-${i}`} className="h-5 w-full" />
-        ))}
-      </div>
-      
-      {/* Calendar days */}
-      {Array.from({ length: rows }).map((_, rowIndex) => (
-        <div key={`row-${rowIndex}`} className="grid grid-cols-7 gap-2 mt-2">
-          {Array.from({ length: columns }).map((_, colIndex) => (
-            <Skeleton 
-              key={`cell-${rowIndex}-${colIndex}`} 
-              className="h-14 w-full rounded-lg"
-            />
-          ))}
-        </div>
-      ))}
-    </div>
-  );
-}
-
 export function UserAvailabilityCalendar({ userId }: UserAvailabilityCalendarProps) {
   const [selectedRange, setSelectedRange] = useState<DateRange | undefined>();
-  const [availability, setAvailability] = useState<TimeSlot[]>([]);
+  const [scheduleEntries, setScheduleEntries] = useState<Map<string, ScheduleEntry[]>>(new Map());
   const [isDialogOpen, setIsDialogOpen] = useState(false);
-  const [selectedStartTime, setSelectedStartTime] = useState("09:00");
-  const [selectedEndTime, setSelectedEndTime] = useState("17:00");
-  const [selectedStatus, setSelectedStatus] = useState<AvailabilityStatus>('available');
+  
+  // TODO: Remove these or adapt when dialog is properly implemented
+  const [selectedStartTime, /* setSelectedStartTime */] = useState("09:00");
+  const [selectedEndTime, /* setSelectedEndTime */] = useState("17:00");
+  const [selectedStatus, setSelectedStatus] = useState<'available' | 'leave'>('available');
+  
   const [holidays, setHolidays] = useState<Holiday[]>([]);
   const [isLoadingHolidays, setIsLoadingHolidays] = useState(false);
   const [isLoadingAvailability, setIsLoadingAvailability] = useState(false);
   const [currentYear, setCurrentYear] = useState(new Date().getFullYear());
   const [currentMonth, setCurrentMonth] = useState<Date>(new Date());
-  
-  const timeOptions = Array.from({ length: 24 }, (_, i) => {
-    const hour = i.toString().padStart(2, "0");
-    return `${hour}:00`;
-  });
-
-  // Format date for API requests
-  const formatDateForApi = (date: Date): string => {
-    return format(date, 'yyyy-MM-dd');
-  };
-
-  // Parse API date to JavaScript Date
-  const parseApiDate = (dateString: string): Date => {
-    return parse(dateString, 'yyyy-MM-dd', new Date());
-  };
 
   // Fetch holidays when the year changes
   useEffect(() => {
     async function fetchHolidays() {
       setIsLoadingHolidays(true);
       try {
-        const holidayData = await calendarService.getHolidays(currentYear);
-        console.log(`Loaded ${holidayData.length} holidays for year ${currentYear}:`, holidayData);
+        // Assert the type from the service call
+        const holidayData = (await calendarService.getHolidays(currentYear)) as unknown as Holiday[];
         setHolidays(holidayData);
       } catch (error) {
         console.error("Failed to fetch holidays:", error);
@@ -126,62 +65,57 @@ export function UserAvailabilityCalendar({ userId }: UserAvailabilityCalendarPro
     fetchHolidays();
   }, [currentYear]);
 
-  // Fetch user availability when month changes
+  // Fetch user availability when month or user changes
   useEffect(() => {
     async function fetchUserAvailability() {
       if (!userId) return;
       
       setIsLoadingAvailability(true);
       try {
-        // First day of the month we're viewing
         const firstDayOfMonth = startOfMonth(currentMonth);
-        
-        // Get the day of the week for the first day (0 = Sunday, 1 = Monday, ..., 6 = Saturday)
         const dayOfWeek = firstDayOfMonth.getDay();
-        
-        // Calculate how many days to go back to reach Monday (first day of week in our calendar)
         const daysToSubtract = dayOfWeek === 0 ? 6 : dayOfWeek - 1;
-        
-        // Create the first visible day in the calendar
         const firstVisibleDay = new Date(firstDayOfMonth);
         firstVisibleDay.setDate(firstDayOfMonth.getDate() - daysToSubtract);
         
-        // Last day of the month
         const lastDayOfMonth = endOfMonth(currentMonth);
-        
-        const lastDayOfWeekday = lastDayOfMonth.getDay(); // 0-6
+        const lastDayOfWeekday = lastDayOfMonth.getDay(); 
         const daysToAdd = lastDayOfWeekday === 0 ? 0 : 7 - lastDayOfWeekday;
-        
-        // Create the last visible day in the calendar
         const lastVisibleDay = new Date(lastDayOfMonth);
         lastVisibleDay.setDate(lastDayOfMonth.getDate() + daysToAdd);
         
-        // Format dates for API
         const startDateFormatted = formatDateForApi(firstVisibleDay);
         const endDateFormatted = formatDateForApi(lastVisibleDay);
         
-        console.log(`Fetching availability for ${userId} from ${startDateFormatted} to ${endDateFormatted}`);
-        
-        const availabilityData = await calendarService.getUserAvailability(
+        // Fetch and cast - Using 'unknown' first as suggested by linter
+        const scheduleData = (await calendarService.getUserAvailability(
           userId,
           startDateFormatted,
           endDateFormatted
-        );
+        )) as unknown as ScheduleEntry[]; 
         
-        console.log(`Loaded ${availabilityData.length} availability entries:`, availabilityData);
+        const entriesMap = new Map<string, ScheduleEntry[]>();
+        scheduleData.forEach(entry => {
+          const dateKey = entry.date; 
+          const entriesForDate = entriesMap.get(dateKey) || [];
+          entriesForDate.push(entry);
+          // Sort entries for the day (available first, then by start time, then leave)
+          entriesForDate.sort((a, b) => {
+             if (a.type === 'available' && b.type !== 'available') return -1;
+             if (a.type !== 'available' && b.type === 'available') return 1;
+             if (a.type === 'available' && b.type === 'available') {
+               return (a.meta as AvailabilityMeta).startTime.localeCompare((b.meta as AvailabilityMeta).startTime);
+             }
+             // Add sorting for leave types if needed (e.g., alphabetically)
+             return 0; 
+          });
+          entriesMap.set(dateKey, entriesForDate);
+        });
         
-        // Convert API data to TimeSlot format
-        const timeSlots: TimeSlot[] = availabilityData.map(item => ({
-          id: item.id,
-          date: parseApiDate(item.date),
-          status: 'available',
-          startTime: item.startTime,
-          endTime: item.endTime
-        }));
-        
-        setAvailability(timeSlots);
+        setScheduleEntries(entriesMap);
+
       } catch (error) {
-        console.error("Failed to fetch user availability:", error);
+        console.error("Failed to fetch user schedule:", error);
       } finally {
         setIsLoadingAvailability(false);
       }
@@ -190,218 +124,86 @@ export function UserAvailabilityCalendar({ userId }: UserAvailabilityCalendarPro
     fetchUserAvailability();
   }, [userId, currentMonth]);
 
-  // Check if a date is a holiday based on the API data
-  const checkIfHoliday = (date: Date): HolidaySlot | null => {
+  // Memoize or define inside component if state dependency is simple
+  const findHolidayForDate = (date: Date): Holiday | null => {
     if (date.getFullYear() !== currentYear) {
-      return null;
+      return null; // Optimization: Quick check if year matches loaded holidays
     }
-    
-    const formattedMonth = (date.getMonth() + 1).toString().padStart(2, '0');
-    const formattedDay = date.getDate().toString().padStart(2, '0');
-    const formattedDate = `${date.getFullYear()}-${formattedMonth}-${formattedDay}`;
-    
-    // Find the matching holiday
-    const holiday = holidays.find(h => h.date === formattedDate);
-    
-    if (holiday) {
-      return {
-        date,
-        status: 'holiday',
-        holidayName: holiday.description
-      };
-    }
-    
-    return null;
+    const formattedDate = formatDateForApi(date);
+    return holidays.find(h => h.date === formattedDate) || null;
   };
 
-  const getAvailabilityForDate = (date: Date): CalendarSlot | undefined => {
-    // Check if it's a holiday first using the API data
-    const holidaySlot = checkIfHoliday(date);
-    if (holidaySlot) {
-      return holidaySlot;
-    }
-    
-    // Fallback to sync check during loading
-    if (isLoadingHolidays && date.getFullYear() === currentYear && isCommonFixedHoliday(date)) {
-      return {
-        date,
-        status: 'holiday',
-        holidayName: getCommonHolidayName(date)
-      };
-    }
-    
-    // Check availability
-    return availability.find(
-      (slot) => slot.date.toDateString() === date.toDateString()
-    );
-  };
 
   const handleSaveAvailability = () => {
+    console.warn("handleSaveAvailability needs update for the new API structure");
     if (!selectedRange?.from) return;
 
-    const newSlots: TimeSlot[] = [];
-    const currentDate = new Date(selectedRange.from);
-    const endDate = selectedRange.to || selectedRange.from;
-
-    while (currentDate <= endDate) {
-      // Skip holidays
-      const holidaySlot = checkIfHoliday(currentDate);
-      if (!holidaySlot) {
-        newSlots.push({
-          date: new Date(currentDate),
-          status: selectedStatus,
-          ...(selectedStatus === 'available' && {
-            startTime: selectedStartTime,
-            endTime: selectedEndTime,
-          }),
-        });
-      }
-      currentDate.setDate(currentDate.getDate() + 1);
-    }
-
-    setAvailability((prev) => {
-      const filtered = prev.filter(
-        (slot) => !newSlots.some(newSlot => 
-          newSlot.date.toDateString() === slot.date.toDateString()
-        )
-      );
-      return [...filtered, ...newSlots];
-    });
-
-    // TODO: Save availability to API 
-    // This would be implemented by calling a new API endpoint to create/update availability
+    // TODO: Implement saving logic based on new API structure.
+    // This will likely involve creating/updating ScheduleEntry objects.
 
     setSelectedRange(undefined);
     setIsDialogOpen(false);
   };
 
-  // Handle month/year navigation to load holidays for the new year
   const handleMonthChange = (date: Date) => {
     setCurrentMonth(date);
     const year = date.getFullYear();
     if (year !== currentYear) {
-      setCurrentYear(year);
+      setCurrentYear(year); // Triggers holiday fetch
     }
   };
   
-  // Go to today's date in calendar
   const goToToday = () => {
     const today = new Date();
     setCurrentMonth(today);
-    
-    // If year changed, update it to fetch new holidays
     if (today.getFullYear() !== currentYear) {
       setCurrentYear(today.getFullYear());
     }
   };
 
+  // Consider memoizing this calculation if performance becomes an issue
   const calculateSummary = () => {
     const summary = {
       workingHours: 0,
-      vacationDays: 0,
-      sickLeaveDays: 0
+      leaveDays: 0,
     };
 
-    availability.forEach(slot => {
-      if (slot.status === 'available' && slot.startTime && slot.endTime) {
-        const start = parseInt(slot.startTime.split(':')[0]);
-        const end = parseInt(slot.endTime.split(':')[0]);
-        summary.workingHours += end - start;
-      } else if (slot.status === 'vacation') {
-        summary.vacationDays += 1;
-      } else if (slot.status === 'sick_leave') {
-        summary.sickLeaveDays += 1;
-      }
+    scheduleEntries.forEach(entries => {
+      entries.forEach(entry => {
+        if (entry.type === 'available') {
+          const meta = entry.meta as AvailabilityMeta;
+          try {
+            const startHour = parseInt(meta.startTime.split(':')[0], 10);
+            const endHour = parseInt(meta.endTime.split(':')[0], 10);
+            if (!isNaN(startHour) && !isNaN(endHour)) {
+              summary.workingHours += (endHour - startHour); 
+            }
+          } catch (e) {
+             console.error("Error parsing time for working hours summary:", meta, e);
+          }
+        } else if (entry.type === 'leave') {
+          // Assumes each 'leave' entry represents one day
+          summary.leaveDays += 1; 
+        }
+      });
     });
 
     return summary;
   };
 
-  const calculateSelectedDays = () => {
-    if (!selectedRange?.from) return 0;
-    if (!selectedRange.to) return 1;
-    
-    const diffTime = selectedRange.to.getTime() - selectedRange.from.getTime();
-    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24)) + 1;
-    return diffDays;
-  };
+  const handleDateSelectForDialog = (date: Date | undefined) => {
+    if (!date) return;
 
-  const handleDateSelect = (range: DateRange | undefined) => {
-    if (!range?.from) {
-      setSelectedRange(undefined);
-      return;
-    }
+    const publicHoliday = findHolidayForDate(date);
+    if (publicHoliday) return; // Don't open dialog for public holidays
 
-    // Don't allow selection of holidays
-    const fromHoliday = checkIfHoliday(range.from);
-    if (fromHoliday) {
-      return;
-    }
+    // Optional: Prevent opening dialog for leave days if desired
+    // const entries = scheduleEntries.get(formatDateForApi(date)) || [];
+    // const isLeave = entries.some(e => e.type === 'leave');
+    // if (isLeave) return; 
 
-    if (range.to) {
-      const toHoliday = checkIfHoliday(range.to);
-      if (toHoliday) {
-        return;
-      }
-    }
-
-    // If clicking the same day that's already selected as a single day, clear the selection
-    if (selectedRange?.from && selectedRange?.to && 
-        range?.from && range?.to &&
-        selectedRange.from.toDateString() === selectedRange.to.toDateString() &&
-        range.from.toDateString() === range.to.toDateString() &&
-        selectedRange.from.toDateString() === range.from.toDateString()) {
-      setSelectedRange(undefined);
-      return;
-    }
-    
-    // If selecting a new single day, set both from and to to the same date
-    if (range?.from && !range.to) {
-      setSelectedRange({ from: range.from, to: range.from });
-      return;
-    }
-
-    setSelectedRange(range);
-  };
-
-  // Helper function to check if a date is a common fixed holiday
-  // Used as a fallback when API data is loading
-  const isCommonFixedHoliday = (date: Date): boolean => {
-    const month = date.getMonth();
-    const day = date.getDate();
-    
-    // Check only major fixed holidays
-    return (
-      (month === 0 && day === 1) ||  // New Year
-      (month === 0 && day === 6) ||  // Epiphany
-      (month === 4 && day === 1) ||  // Labor Day
-      (month === 4 && day === 3) ||  // Constitution Day
-      (month === 7 && day === 15) || // Assumption
-      (month === 10 && day === 1) || // All Saints Day
-      (month === 10 && day === 11) || // Independence Day
-      (month === 11 && day === 25) || // Christmas Day
-      (month === 11 && day === 26)    // Second Day of Christmas
-    );
-  };
-  
-  // Helper function to get holiday name for common fixed holidays
-  const getCommonHolidayName = (date: Date): string | null => {
-    if (!isCommonFixedHoliday(date)) return null;
-    
-    const month = date.getMonth();
-    const day = date.getDate();
-    
-    if (month === 0 && day === 1) return 'Nowy Rok';
-    if (month === 0 && day === 6) return 'Święto Trzech Króli';
-    if (month === 4 && day === 1) return 'Święto Pracy';
-    if (month === 4 && day === 3) return 'Święto Konstytucji 3 Maja';
-    if (month === 7 && day === 15) return 'Wniebowzięcie Najświętszej Maryi Panny';
-    if (month === 10 && day === 1) return 'Wszystkich Świętych';
-    if (month === 10 && day === 11) return 'Święto Niepodległości';
-    if (month === 11 && day === 25) return 'Boże Narodzenie (pierwszy dzień)';
-    if (month === 11 && day === 26) return 'Boże Narodzenie (drugi dzień)';
-    
-    return 'Święto';
+    setSelectedRange({ from: date, to: date });
+    setIsDialogOpen(true);
   };
 
   return (
@@ -421,18 +223,9 @@ export function UserAvailabilityCalendar({ userId }: UserAvailabilityCalendarPro
         <CalendarShimmer />
       ) : (
         <Calendar
-          mode="single"
-          selected={selectedRange?.from}
-          onSelect={(date) => {
-            if (date) {
-              // Don't allow selection of holidays
-              const holidaySlot = checkIfHoliday(date);
-              if (holidaySlot) return;
-              
-              setSelectedRange({ from: date, to: date });
-              setIsDialogOpen(true);
-            }
-          }}
+          mode="single" // Keep single mode for triggering the dialog on click
+          selected={selectedRange?.from} // Highlight the day dialog is open for
+          onSelect={handleDateSelectForDialog} // Use specific handler for opening dialog
           month={currentMonth}
           onMonthChange={handleMonthChange}
           className="w-full"
@@ -450,71 +243,92 @@ export function UserAvailabilityCalendar({ userId }: UserAvailabilityCalendarPro
             head_cell: "text-muted-foreground font-medium text-sm text-center",
             row: "grid grid-cols-7 gap-2 mt-2",
             cell: "relative p-0 text-center",
-            day: "h-14 w-full p-0 font-normal aria-selected:opacity-100",
-            day_selected: "bg-primary/5 hover:bg-primary/10",
-            day_today: "bg-accent",
+            day: "h-14 w-full p-0 font-normal", 
+            day_selected: "", // Clear default selection style, handled in DayContent
+            day_today: "", // Remove default today style, handled in DayContent
             day_hidden: "invisible",
           }}
           components={{
             DayContent: ({ date }) => {
-              const slot = getAvailabilityForDate(date);
+              const dateKey = formatDateForApi(date);
+              const entries = scheduleEntries.get(dateKey) || [];
+              const publicHoliday = findHolidayForDate(date);
               const isToday = date.toDateString() === new Date().toDateString();
-              const status = slot?.status || 'unavailable';
-              
-              // Check if date is outside current month
               const isOutsideMonth = date.getMonth() !== currentMonth.getMonth();
+
+              let dayStatus: 'available' | 'leave' | 'holiday' | 'unavailable' = 'unavailable';
+              let content = null;
+              let tooltipContent: string | null = null;
+              const customStyle: React.CSSProperties = {};
+
+              if (publicHoliday) {
+                dayStatus = 'holiday';
+                tooltipContent = publicHoliday.description;
+                content = <div className="text-[10px] font-medium mt-1">Holiday</div>;
+              } else if (entries.length > 0) {
+                 const leaveEntry = entries.find(e => e.type === 'leave');
+                 if (leaveEntry) {
+                    dayStatus = 'leave';
+                    const meta = leaveEntry.meta as LeaveMeta;
+                    content = <div className="text-[10px] font-medium mt-1">{meta.leaveTypeLabel}</div>;
+                    tooltipContent = meta.reason; // Show reason in tooltip
+                    if (meta.color) {
+                       // Apply color from meta, ensure sufficient contrast or adjust text color
+                       customStyle.backgroundColor = meta.color; 
+                       // Basic contrast check needed here if colors vary widely
+                       customStyle.color = "#333"; // Example: default dark text
+                    }
+                 } else {
+                    dayStatus = 'available';
+                    const availableEntries = entries.filter(e => e.type === 'available') as (ScheduleEntry & { meta: AvailabilityMeta })[];
+                    // Display multiple time slots if they exist
+                    content = availableEntries.map(entry => (
+                      <div key={entry.meta.id} className="text-[10px] font-medium mt-0.5 leading-tight"> 
+                        {entry.meta.startTime}-{entry.meta.endTime}
+                      </div>
+                    ));
+                 }
+              } else {
+                dayStatus = 'unavailable'; 
+              }
               
-              const dayContent = (
-                <div
-                  className={cn(
-                    "h-14 w-full flex flex-col justify-center items-center rounded-lg transition-colors",
-                    statusStyles[status],
-                    isToday && "border-primary border",
-                    isOutsideMonth && "opacity-40",
-                    "focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-primary"
-                  )}
-                >
-                  <div className={cn(
-                    "font-medium",
-                    isToday && "text-primary"
-                  )}>{date.getDate()}</div>
-                  {status === 'available' && slot && 'startTime' in slot && 'endTime' in slot && (
-                    <div className="text-[10px] font-medium mt-1">
-                      {slot.startTime}-{slot.endTime}
-                    </div>
-                  )}
-                  {status === 'holiday' && (
-                    <div className="text-[10px] font-medium mt-1">
-                      Holidays
-                    </div>
-                  )}
+              const dayClasses = cn(
+                "h-14 w-full flex flex-col justify-center items-center rounded-lg transition-colors cursor-pointer", // Added cursor-pointer
+                statusStyles[dayStatus] || statusStyles.default,
+                isToday && "ring-2 ring-primary ring-offset-1", // Enhanced today highlight
+                isOutsideMonth && "opacity-40 pointer-events-none", // Disable clicks outside month
+                "focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-primary"
+              );
+
+              const dayElement = (
+                <div className={dayClasses} style={customStyle}>
+                  <div className={cn("text-sm font-medium", isToday && "font-bold")}> {/* Make today's date bold */}
+                    {date.getDate()}
+                  </div>
+                  {content}
                 </div>
               );
 
-              // Wrap in tooltip if it's a holiday
-              if (status === 'holiday' && slot?.holidayName) {
+              if (tooltipContent) {
                 return (
-                  <TooltipProvider>
+                  <TooltipProvider delayDuration={300}>
                     <Tooltip>
-                      <TooltipTrigger asChild>
-                        {dayContent}
-                      </TooltipTrigger>
-                      <TooltipContent>
-                        <p>{slot.holidayName}</p>
-                      </TooltipContent>
+                      <TooltipTrigger asChild>{dayElement}</TooltipTrigger>
+                      <TooltipContent><p>{tooltipContent}</p></TooltipContent>
                     </Tooltip>
                   </TooltipProvider>
                 );
               }
 
-              return dayContent;
+              return dayElement;
             },
           }}
         />
       )}
 
+      {/* Summary Section */}
       <div className="grid grid-cols-3 gap-4 pt-4 border-t">
-        {isLoadingHolidays || isLoadingAvailability ? (
+        {isLoadingAvailability ? ( // Only shimmer summary if availability is loading
           <>
             <Skeleton className="h-24 w-full rounded-lg" />
             <Skeleton className="h-24 w-full rounded-lg" />
@@ -526,126 +340,120 @@ export function UserAvailabilityCalendar({ userId }: UserAvailabilityCalendarPro
               <span className="text-sm font-medium text-green-700">Working Hours</span>
               <span className="text-2xl font-semibold text-green-700">{calculateSummary().workingHours}h</span>
             </div>
-            <div className="flex flex-col items-center p-4 bg-orange-50 rounded-lg">
-              <span className="text-sm font-medium text-orange-700">Vacation Days</span>
-              <span className="text-2xl font-semibold text-orange-700">{calculateSummary().vacationDays}d</span>
+            <div className="flex flex-col items-center p-4 bg-yellow-50 rounded-lg">
+              <span className="text-sm font-medium text-yellow-700">Leave Days</span>
+              <span className="text-2xl font-semibold text-yellow-700">{calculateSummary().leaveDays}d</span>
             </div>
-            <div className="flex flex-col items-center p-4 bg-red-50 rounded-lg">
-              <span className="text-sm font-medium text-red-700">Sick Leave Days</span>
-              <span className="text-2xl font-semibold text-red-700">{calculateSummary().sickLeaveDays}d</span>
+             <div className="flex flex-col items-center p-4 bg-gray-50 rounded-lg">
+              <span className="text-sm font-medium text-gray-700">Holidays (Month)</span> 
+              <span className="text-2xl font-semibold text-gray-700">
+                {holidays.filter(h => new Date(h.date).getMonth() === currentMonth.getMonth()).length}d
+              </span>
             </div>
           </>
         )}
       </div>
 
+      {/* Dialog for Adding/Editing Availability/Leave */}
       <Dialog open={isDialogOpen} onOpenChange={(open) => {
-        if (!open) setSelectedRange(undefined);
+        if (!open) setSelectedRange(undefined); // Clear selection when closing dialog
         setIsDialogOpen(open);
       }}>
         <DialogContent className="sm:max-w-[425px]">
           <DialogHeader>
             <DialogTitle>
-              Set Availability
+              {/* TODO: Update Title based on selected date/action */}
+              Set Availability / Request Leave for {selectedRange?.from ? format(selectedRange.from, 'PPP') : ''}
             </DialogTitle>
           </DialogHeader>
-          <div className="space-y-6">
-            <div>
-              <label className="text-sm font-medium mb-2 block">Status</label>
-              <Select value={selectedStatus} onValueChange={(value: AvailabilityStatus) => setSelectedStatus(value)}>
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="available">Available</SelectItem>
-                  <SelectItem value="unavailable">Unavailable</SelectItem>
-                  <SelectItem value="vacation">Vacation</SelectItem>
-                  <SelectItem value="sick_leave">Sick Leave</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
+         
+          {/* --- DIALOG CONTENT NEEDS REWORK --- */}
+          <div className="space-y-4 pt-4"> 
+             <p className="text-center text-red-600 font-semibold text-sm">
+               NOTE: This dialog's functionality requires significant updates <br/>
+               to properly interact with the backend API <br/>
+               for creating/modifying schedule entries.
+             </p>
+            
+             {/* Example: Displaying existing entries for the selected day */}
+             {selectedRange?.from && (
+                 <div>
+                    <h4 className="text-sm font-medium mb-2">Existing Entries:</h4>
+                    <div className="text-xs space-y-1 p-2 border rounded bg-muted">
+                       {(scheduleEntries.get(formatDateForApi(selectedRange.from)) || []).length > 0 ? 
+                           (scheduleEntries.get(formatDateForApi(selectedRange.from)) || []).map(entry => (
+                             <div key={entry.meta.id}>
+                               {entry.type === 'available' ? 
+                                 `Available: ${(entry.meta as AvailabilityMeta).startTime} - ${(entry.meta as AvailabilityMeta).endTime}` : 
+                                 `Leave: ${(entry.meta as LeaveMeta).leaveTypeLabel}` 
+                               }
+                             </div>
+                           )) : <p className="text-muted-foreground">None</p>
+                       }
+                    </div>
+                 </div>
+             )}
 
-            <div>
-              <div className="flex justify-between items-center mb-2">
-                <label className="text-sm font-medium">Select Date Range</label>
-                {selectedRange?.from && (
-                  <span className="text-sm text-muted-foreground">
-                    Total: {calculateSelectedDays()} {calculateSelectedDays() === 1 ? 'day' : 'days'}
-                  </span>
-                )}
-              </div>
-              <Calendar
-                mode="range"
-                selected={selectedRange}
-                onSelect={handleDateSelect}
-                onMonthChange={handleMonthChange}
-                disabled={(date) => date < new Date()}
-                className="border rounded-md p-3"
-                classNames={{
-                  months: "w-full",
-                  month: "w-full space-y-4",
-                  caption: "flex justify-center pt-1 relative items-center",
-                  caption_label: "text-sm font-medium",
-                  nav: "space-x-1 flex items-center",
-                  nav_button: "h-7 w-7 bg-transparent p-0 opacity-50 hover:opacity-100",
-                  nav_button_previous: "absolute left-1",
-                  nav_button_next: "absolute right-1",
-                  table: "w-full border-collapse",
-                  head_row: "grid grid-cols-7 gap-2",
-                  head_cell: "text-muted-foreground font-medium text-[0.8rem] text-center",
-                  row: "grid grid-cols-7 gap-2 mt-2",
-                  cell: "relative p-0 text-center focus-within:relative focus-within:z-20",
-                  day: "h-8 w-full p-0 font-normal aria-selected:opacity-100",
-                  day_range_start: "rounded-l-md bg-primary text-primary-foreground",
-                  day_range_end: "rounded-r-md bg-primary text-primary-foreground",
-                  day_selected: "bg-primary text-primary-foreground hover:bg-primary hover:text-primary-foreground focus:bg-primary focus:text-primary-foreground",
-                }}
-              />
-            </div>
+             {/* Simplified controls - needs full implementation */}
+             <div>
+              <label className="text-sm font-medium mb-1 block">Action Type (Example)</label>
+               <Select value={selectedStatus} onValueChange={(value: 'available' | 'leave') => setSelectedStatus(value)}>
+                 <SelectTrigger><SelectValue placeholder="Select action..." /></SelectTrigger>
+                 <SelectContent>
+                   <SelectItem value="available">Set Available Time</SelectItem>
+                   <SelectItem value="leave">Request Leave</SelectItem>
+                   {/* Add "Remove Entry" maybe? */}
+                 </SelectContent>
+               </Select>
+             </div>
 
-            {selectedStatus === 'available' && (
-              <div className="grid grid-cols-2 gap-6">
-                <div>
-                  <label className="text-sm font-medium mb-2 block">Start Time</label>
-                  <Select value={selectedStartTime} onValueChange={setSelectedStartTime}>
-                    <SelectTrigger>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {timeOptions.map((time) => (
-                        <SelectItem key={time} value={time}>
-                          {time}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div>
-                  <label className="text-sm font-medium mb-2 block">End Time</label>
-                  <Select value={selectedEndTime} onValueChange={setSelectedEndTime}>
-                    <SelectTrigger>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {timeOptions.map((time) => (
-                        <SelectItem key={time} value={time}>
-                          {time}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
+             {/* Conditional inputs based on selected action */}
+             {selectedStatus === 'available' && (
+              <div className="grid grid-cols-2 gap-4">
+                  {/* Replace with actual Time Input components */}
+                  <div>
+                      <label className="text-sm font-medium mb-1 block">Start Time</label>
+                      <input type="time" defaultValue={selectedStartTime} className="w-full p-2 border rounded" />
+                  </div>
+                  <div>
+                      <label className="text-sm font-medium mb-1 block">End Time</label>
+                      <input type="time" defaultValue={selectedEndTime} className="w-full p-2 border rounded" />
+                  </div>
               </div>
-            )}
+             )}
+
+             {selectedStatus === 'leave' && (
+               <div className="space-y-3">
+                  {/* Replace with actual Select component populated from API/config */}
+                  <div>
+                    <label className="text-sm font-medium mb-1 block">Leave Type</label>
+                    <Select>
+                        <SelectTrigger><SelectValue placeholder="Select leave type..." /></SelectTrigger>
+                        <SelectContent>
+                            <SelectItem value="vacation">Vacation</SelectItem>
+                            <SelectItem value="sick">Sick Leave</SelectItem>
+                            {/* Add other types */}
+                        </SelectContent>
+                    </Select>
+                  </div>
+                  <div>
+                    <label className="text-sm font-medium mb-1 block">Reason (Optional)</label>
+                    <textarea rows={2} placeholder="Enter reason..." className="w-full p-2 border rounded text-sm"></textarea>
+                  </div>
+               </div>
+             )}
+
+             {/* If range selection within dialog is needed, re-add calendar here */}
+             {/* <Calendar mode="range" ... onSelect={handleDialogRangeSelect} ... /> */}
           </div>
-          <div className="flex justify-end gap-3 mt-6">
-            <Button variant="outline" onClick={() => {
-              setSelectedRange(undefined);
-              setIsDialogOpen(false);
-            }}>
+          {/* --- End Dialog Content Rework --- */}
+
+          <div className="flex justify-end gap-3 pt-4">
+            <Button variant="outline" onClick={() => setIsDialogOpen(false)}>
               Cancel
             </Button>
-            <Button onClick={handleSaveAvailability}>
-              Save
+            <Button onClick={handleSaveAvailability} disabled> {/* Disable save until implemented */}
+              Save (Update Needed)
             </Button>
           </div>
         </DialogContent>
