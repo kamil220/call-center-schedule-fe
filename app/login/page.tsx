@@ -1,11 +1,11 @@
 import { LoginForm } from '@/components/login-form';
-import { EasterBunny } from '@/components/easter-bunny';
+import { SiteFooter } from '@/components/site-footer';
 
 export default function LoginPage() {
   return (
     <>
       <LoginForm />
-      <EasterBunny />
+      <SiteFooter />
     </>
   );
 } 
