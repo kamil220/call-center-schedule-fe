@@ -24,6 +24,7 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog";
 import { Separator } from "@/components/ui/separator";
+import Link from 'next/link';
 
 // User role credentials
 const roleCredentials = [
@@ -228,8 +229,10 @@ export function LoginForm() {
                 </div>
               </div>
               <div className="space-y-4">
-                <Button variant="outline" className="w-full">
-                  View Documentation
+                <Button variant="outline" className="w-full" asChild>
+                  <Link href="/documentation">
+                    View Documentation
+                  </Link>
                 </Button>
               </div>
             </div>
