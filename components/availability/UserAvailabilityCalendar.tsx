@@ -1,13 +1,11 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { format, startOfMonth, endOfMonth } from "date-fns";
+import { startOfMonth, endOfMonth } from "date-fns";
 import type { DateRange } from "react-day-picker";
 
 import { Calendar } from "@/components/ui/calendar";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { Skeleton } from "@/components/ui/skeleton"; // Kept for summary shimmer
 import { CalendarShimmer } from "@/components/availability/CalendarShimmer";
@@ -34,12 +32,6 @@ interface UserAvailabilityCalendarProps {
 export function UserAvailabilityCalendar({ userId }: UserAvailabilityCalendarProps) {
   const [selectedRange, setSelectedRange] = useState<DateRange | undefined>();
   const [scheduleEntries, setScheduleEntries] = useState<Map<string, ScheduleEntry[]>>(new Map());
-  const [isDialogOpen, setIsDialogOpen] = useState(false);
-  
-  // TODO: Remove these or adapt when dialog is properly implemented
-  const [selectedStartTime, /* setSelectedStartTime */] = useState("09:00");
-  const [selectedEndTime, /* setSelectedEndTime */] = useState("17:00");
-  const [selectedStatus, setSelectedStatus] = useState<'available' | 'leave'>('available');
   
   const [holidays, setHolidays] = useState<Holiday[]>([]);
   const [isLoadingHolidays, setIsLoadingHolidays] = useState(false);
@@ -353,111 +345,6 @@ export function UserAvailabilityCalendar({ userId }: UserAvailabilityCalendarPro
           </>
         )}
       </div>
-
-      {/* Dialog for Adding/Editing Availability/Leave */}
-      <Dialog open={isDialogOpen} onOpenChange={(open) => {
-        if (!open) setSelectedRange(undefined); // Clear selection when closing dialog
-        setIsDialogOpen(open);
-      }}>
-        <DialogContent className="sm:max-w-[425px]">
-          <DialogHeader>
-            <DialogTitle>
-              {/* TODO: Update Title based on selected date/action */}
-              Set Availability / Request Leave for {selectedRange?.from ? format(selectedRange.from, 'PPP') : ''}
-            </DialogTitle>
-          </DialogHeader>
-         
-          {/* --- DIALOG CONTENT NEEDS REWORK --- */}
-          <div className="space-y-4 pt-4"> 
-             <p className="text-center text-red-600 font-semibold text-sm">
-               NOTE: This dialog's functionality requires significant updates <br/>
-               to properly interact with the backend API <br/>
-               for creating/modifying schedule entries.
-             </p>
-            
-             {/* Example: Displaying existing entries for the selected day */}
-             {selectedRange?.from && (
-                 <div>
-                    <h4 className="text-sm font-medium mb-2">Existing Entries:</h4>
-                    <div className="text-xs space-y-1 p-2 border rounded bg-muted">
-                       {(scheduleEntries.get(formatDateForApi(selectedRange.from)) || []).length > 0 ? 
-                           (scheduleEntries.get(formatDateForApi(selectedRange.from)) || []).map(entry => (
-                             <div key={entry.meta.id}>
-                               {entry.type === 'available' ? 
-                                 `Available: ${(entry.meta as AvailabilityMeta).startTime} - ${(entry.meta as AvailabilityMeta).endTime}` : 
-                                 `Leave: ${(entry.meta as LeaveMeta).leaveTypeLabel}` 
-                               }
-                             </div>
-                           )) : <p className="text-muted-foreground">None</p>
-                       }
-                    </div>
-                 </div>
-             )}
-
-             {/* Simplified controls - needs full implementation */}
-             <div>
-              <label className="text-sm font-medium mb-1 block">Action Type (Example)</label>
-               <Select value={selectedStatus} onValueChange={(value: 'available' | 'leave') => setSelectedStatus(value)}>
-                 <SelectTrigger><SelectValue placeholder="Select action..." /></SelectTrigger>
-                 <SelectContent>
-                   <SelectItem value="available">Set Available Time</SelectItem>
-                   <SelectItem value="leave">Request Leave</SelectItem>
-                   {/* Add "Remove Entry" maybe? */}
-                 </SelectContent>
-               </Select>
-             </div>
-
-             {/* Conditional inputs based on selected action */}
-             {selectedStatus === 'available' && (
-              <div className="grid grid-cols-2 gap-4">
-                  {/* Replace with actual Time Input components */}
-                  <div>
-                      <label className="text-sm font-medium mb-1 block">Start Time</label>
-                      <input type="time" defaultValue={selectedStartTime} className="w-full p-2 border rounded" />
-                  </div>
-                  <div>
-                      <label className="text-sm font-medium mb-1 block">End Time</label>
-                      <input type="time" defaultValue={selectedEndTime} className="w-full p-2 border rounded" />
-                  </div>
-              </div>
-             )}
-
-             {selectedStatus === 'leave' && (
-               <div className="space-y-3">
-                  {/* Replace with actual Select component populated from API/config */}
-                  <div>
-                    <label className="text-sm font-medium mb-1 block">Leave Type</label>
-                    <Select>
-                        <SelectTrigger><SelectValue placeholder="Select leave type..." /></SelectTrigger>
-                        <SelectContent>
-                            <SelectItem value="vacation">Vacation</SelectItem>
-                            <SelectItem value="sick">Sick Leave</SelectItem>
-                            {/* Add other types */}
-                        </SelectContent>
-                    </Select>
-                  </div>
-                  <div>
-                    <label className="text-sm font-medium mb-1 block">Reason (Optional)</label>
-                    <textarea rows={2} placeholder="Enter reason..." className="w-full p-2 border rounded text-sm"></textarea>
-                  </div>
-               </div>
-             )}
-
-             {/* If range selection within dialog is needed, re-add calendar here */}
-             {/* <Calendar mode="range" ... onSelect={handleDialogRangeSelect} ... /> */}
-          </div>
-          {/* --- End Dialog Content Rework --- */}
-
-          <div className="flex justify-end gap-3 pt-4">
-            <Button variant="outline" onClick={() => setIsDialogOpen(false)}>
-              Cancel
-            </Button>
-            <Button onClick={handleSaveAvailability} disabled> {/* Disable save until implemented */}
-              Save (Update Needed)
-            </Button>
-          </div>
-        </DialogContent>
-      </Dialog>
     </div>
   );
 } 
