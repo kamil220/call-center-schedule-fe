@@ -226,3 +226,15 @@
   background-color: hsl(var(--muted));
   font-weight: 600;
 }
+
+ul {
+  @apply list-disc;
+}
+
+ol {
+  @apply list-decimal;
+}
+
+div[role="alert"] {
+  @apply mb-4;
+}

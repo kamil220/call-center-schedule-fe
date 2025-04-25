@@ -10,8 +10,8 @@ import { DocumentationContent } from '../../components/documentation-content';
 
 export default function DocumentationPage() {
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
-  const [headings, setHeadings] = useState<Array<{id: string, text: string, level: number}>>([]);
-  const [mainHeadings, setMainHeadings] = useState<Array<{id: string, text: string, level: number}>>([]);
+  const [headings, setHeadings] = useState<Array<{id: string, text: string, level: number, icon?: string}>>([]);
+  const [mainHeadings, setMainHeadings] = useState<Array<{id: string, text: string, level: number, icon?: string}>>([]);
   const contentRef = useRef<HTMLDivElement>(null);
   const [activeSectionId, setActiveSectionId] = useState<string>("");
   const [isDarkMode, setIsDarkMode] = useState(false);
@@ -35,13 +35,17 @@ export default function DocumentationPage() {
       if (contentRef.current) {
         const headingElements = contentRef.current.querySelectorAll('h1, h2, h3, h4, h5, h6');
         const extractedHeadings = Array.from(headingElements).map(heading => {
-          if (!heading.id) {
-            heading.id = heading.textContent?.toLowerCase().replace(/\s+/g, '-') || '';
-          }
+          // Find the icon span element (it's always the first child if present)
+          const iconSpan = heading.querySelector('.inline-block.align-middle');
+          const icon = iconSpan?.textContent || undefined;
+          
+          // Get the text content excluding the icon
+          const text = heading.textContent?.replace(icon || '', '').trim() || '';
           
           return {
-            id: heading.id,
-            text: heading.textContent || '',
+            id: heading.id || text.toLowerCase().replace(/\s+/g, '-'),
+            text: text,
+            icon: icon,
             level: parseInt(heading.tagName.substring(1), 10)
           };
         });
@@ -103,7 +107,7 @@ export default function DocumentationPage() {
   };
 
   const activeMainHeading = mainHeadings.find(h => h.id === activeSectionId);
-  const activeSection = activeMainHeading ? activeMainHeading.text : "Documentation";
+  const activeSection = activeMainHeading ? (activeMainHeading.icon ? `${activeMainHeading.icon} ${activeMainHeading.text}` : activeMainHeading.text) : "Documentation";
 
   return (
     <div className="flex min-h-screen">
@@ -149,9 +153,26 @@ export default function DocumentationPage() {
                     ) : "justify-center"
                   )}
                 >
-                  {heading.level === 1 && <BookOpen className={cn("h-4 w-4 mr-2", !isSidebarOpen && "mr-0")} />}
-                  {heading.level !== 1 && <FileText className={cn("h-4 w-4 mr-2", !isSidebarOpen && "mr-0")} />}
-                  {isSidebarOpen && <span className="text-sm truncate">{heading.text}</span>}
+                  {!isSidebarOpen ? (
+                    heading.icon ? (
+                      <span className="w-4 flex justify-center">{heading.icon}</span>
+                    ) : (
+                      heading.level === 1 ? 
+                        <BookOpen className="h-4 w-4" /> : 
+                        <FileText className="h-4 w-4" />
+                    )
+                  ) : (
+                    <>
+                      {heading.icon ? (
+                        <span className="w-4 flex justify-center mr-2">{heading.icon}</span>
+                      ) : (
+                        heading.level === 1 ? 
+                          <BookOpen className="h-4 w-4 mr-2" /> : 
+                          <FileText className="h-4 w-4 mr-2" />
+                      )}
+                      <span className="text-sm truncate">{heading.text}</span>
+                    </>
+                  )}
                 </button>
               );
             })}
