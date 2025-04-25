@@ -57,7 +57,6 @@ function AlertTitle({ className, ...props }: React.ComponentProps<"div">) {
 
 function AlertDescription({
   className,
-  children,
   ...props
 }: React.ComponentProps<"div">) {
   return (
@@ -68,11 +67,7 @@ function AlertDescription({
         className
       )}
       {...props}
-    >
-      <p>
-        {children}
-      </p>
-    </div>
+    />
   )
 }
 

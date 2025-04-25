@@ -140,7 +140,9 @@ export function DocumentationContent() {
         <AlertTriangle className="h-4 w-4" />
         <AlertTitle>Forma zatrudnienia</AlertTitle>
         <AlertDescription>
+          <p>
             Nie wspominano o formie zatrudnienia kadry, co może być istotne przy planowaniu grafiku dla pracowników zatrudnionych na formie Umowy o Prace. Według <a href="https://kadry.infor.pl/kadry/hrm/zarzadzanie/695658,Praca-w-dzialach-CallContact-Center.html">badania Nowoczesnej Firmy z 2014 roku</a>, aż 58% pracowników zatrudnianych w Call Center pracuję na podstawię klasycznej umowy o pracę, a w krajach skandynawskich ta grupa stanowi aż 2/3 wszystkich zatrudnionych.
+          </p>
         </AlertDescription>
       </Alert>
 
@@ -148,9 +150,11 @@ export function DocumentationContent() {
         <Lightbulb className="h-4 w-4" />
         <AlertTitle>Szkolenie kadry</AlertTitle>
         <AlertDescription>
-          Według <a href="https://scholarworks.waldenu.edu/cgi/viewcontent.cgi?article=13520&context=dissertations">raportu/strategii Walden University z Marca 2022</a>, Europejscy liderzy call center 
-          w ramach strategii rozwoju pracowników, stosują rotacje stanowisk na nowe ścieżki 
-          tematyczne, co może być istotne przy planowaniu grafiku oraz architekturze oprogramowania.
+          <p>
+            Według <a href="https://scholarworks.waldenu.edu/cgi/viewcontent.cgi?article=13520&context=dissertations">raportu/strategii Walden University z Marca 2022</a>, Europejscy liderzy call center 
+            w ramach strategii rozwoju pracowników, stosują rotacje stanowisk na nowe ścieżki 
+            tematyczne, co może być istotne przy planowaniu grafiku oraz architekturze oprogramowania.
+          </p>
         </AlertDescription>
       </Alert>
 
