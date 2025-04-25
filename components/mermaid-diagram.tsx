@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from 'react';
 import mermaid from 'mermaid';
-import { ZoomIn, ZoomOut, X, Maximize2 } from 'lucide-react';
+import { ZoomIn, ZoomOut, X, Maximize2, MoveHorizontal } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
   Dialog,
@@ -28,6 +28,9 @@ export function MermaidDiagram({ chart, className = '' }: MermaidProps) {
   const [startPanPosition, setStartPanPosition] = useState({ x: 0, y: 0 });
   const [isFullScreen, setIsFullScreen] = useState(false);
   const [themeMode, setThemeMode] = useState<'light' | 'dark'>('light');
+  const [diagramSize, setDiagramSize] = useState({ width: 0, height: 0 });
+  const [containerSize, setContainerSize] = useState({ width: 0, height: 0 });
+  const [initialScale, setInitialScale] = useState(1);
   
   useEffect(() => {
     const isDarkMode = window.matchMedia('(prefers-color-scheme: dark)').matches;
@@ -56,6 +59,16 @@ export function MermaidDiagram({ chart, className = '' }: MermaidProps) {
     }
   }, [chart, themeMode, isFullScreen]);
   
+  const calculateInitialScale = (container: HTMLDivElement, svg: SVGElement) => {
+    const containerRect = container.getBoundingClientRect();
+    const svgRect = svg.getBoundingClientRect();
+    
+    const scaleX = (containerRect.width - 40) / svgRect.width;
+    const scaleY = (containerRect.height - 40) / svgRect.height;
+    
+    return Math.min(scaleX, scaleY, 1); // Don't scale up, only down if needed
+  };
+  
   const renderChart = async (container: HTMLDivElement | null) => {
     if (!container) return;
     
@@ -69,10 +82,29 @@ export function MermaidDiagram({ chart, className = '' }: MermaidProps) {
       if (svgElement) {
         svgElement.style.transformOrigin = 'center';
         
-        if (container === mermaidRef.current) {
+        // Set initial dimensions for the SVG
+        svgElement.style.width = '100%';
+        svgElement.style.height = '100%';
+        
+        // Calculate and set initial scale
+        if (container === fullscreenRef.current) {
+          const newScale = calculateInitialScale(container, svgElement);
+          setFullscreenScale(newScale);
+          setInitialScale(newScale);
+          updateTransform(svgElement, newScale, fullscreenPosition);
+          
+          // Update sizes for boundaries
+          const svgRect = svgElement.getBoundingClientRect();
+          setDiagramSize({
+            width: svgRect.width,
+            height: svgRect.height
+          });
+          setContainerSize({
+            width: container.clientWidth,
+            height: container.clientHeight
+          });
+        } else {
           updateTransform(svgElement, scale, position);
-        } else if (container === fullscreenRef.current) {
-          updateTransform(svgElement, fullscreenScale, fullscreenPosition);
         }
       }
     } catch (error) {
@@ -129,8 +161,6 @@ export function MermaidDiagram({ chart, className = '' }: MermaidProps) {
   };
   
   const handleMouseDownFullscreen = (e: React.MouseEvent) => {
-    if (fullscreenScale <= 1) return;
-    
     setIsPanning(true);
     setStartPanPosition({ 
       x: e.clientX - fullscreenPosition.x, 
@@ -146,7 +176,16 @@ export function MermaidDiagram({ chart, className = '' }: MermaidProps) {
     
     const newX = e.clientX - startPanPosition.x;
     const newY = e.clientY - startPanPosition.y;
-    setFullscreenPosition({ x: newX, y: newY });
+    
+    // Calculate boundaries with padding
+    const maxX = Math.max((diagramSize.width * fullscreenScale - containerSize.width) / 2 + 100, 100);
+    const maxY = Math.max((diagramSize.height * fullscreenScale - containerSize.height) / 2 + 100, 100);
+    
+    // Apply boundaries with smoother limits
+    const boundedX = Math.max(Math.min(newX, maxX), -maxX);
+    const boundedY = Math.max(Math.min(newY, maxY), -maxY);
+    
+    setFullscreenPosition({ x: boundedX, y: boundedY });
   };
   
   const handleMouseUp = (e: React.MouseEvent) => {
@@ -160,7 +199,6 @@ export function MermaidDiagram({ chart, className = '' }: MermaidProps) {
   const handleDialogChange = (open: boolean) => {
     setIsFullScreen(open);
     if (open) {
-      setFullscreenScale(1);
       setFullscreenPosition({ x: 0, y: 0 });
       
       setTimeout(() => {
@@ -195,6 +233,35 @@ export function MermaidDiagram({ chart, className = '' }: MermaidProps) {
     };
   }, []);
   
+  // Add resize observer
+  useEffect(() => {
+    if (!fullscreenRef.current) return;
+    
+    const resizeObserver = new ResizeObserver((entries) => {
+      for (const entry of entries) {
+        const svg = entry.target.querySelector('svg');
+        if (svg) {
+          setDiagramSize({
+            width: svg.getBoundingClientRect().width,
+            height: svg.getBoundingClientRect().height
+          });
+          setContainerSize({
+            width: entry.contentRect.width,
+            height: entry.contentRect.height
+          });
+        }
+      }
+    });
+    
+    resizeObserver.observe(fullscreenRef.current);
+    return () => resizeObserver.disconnect();
+  }, [isFullScreen]);
+  
+  const centerDiagram = () => {
+    setFullscreenPosition({ x: 0, y: 0 });
+    setFullscreenScale(initialScale);
+  };
+  
   return (
     <div className={`my-6 rounded border bg-muted/50 ${className}`}>
       <div className="flex justify-end gap-1 p-1 border-b">
@@ -227,10 +294,19 @@ export function MermaidDiagram({ chart, className = '' }: MermaidProps) {
               <Maximize2 className="h-4 w-4" />
             </Button>
           </DialogTrigger>
-          <DialogContent className="w-[100vw] h-[100vh] sm:max-w-[100%] p-0 m-0 rounded-none border-0 overflow-hidden">
+          <DialogContent className="w-[100vw] h-[100vh] sm:max-w-[100%] p-0 m-0 rounded-none border-0">
             <div className="flex justify-between items-center h-10 px-3 border-b bg-background shadow-sm z-10">
               <DialogTitle className="text-sm font-medium">Diagram</DialogTitle>
               <div className="flex items-center gap-2">
+                <Button 
+                  variant="ghost" 
+                  size="icon" 
+                  className="h-7 w-7" 
+                  onClick={centerDiagram}
+                  title="Center diagram"
+                >
+                  <MoveHorizontal className="h-4 w-4" />
+                </Button>
                 <Button 
                   variant="ghost" 
                   size="icon" 
@@ -254,7 +330,7 @@ export function MermaidDiagram({ chart, className = '' }: MermaidProps) {
                     variant="ghost" 
                     size="icon" 
                     className="h-7 w-7"
-                    title="Close fullscreen"
+                    title="Close"
                   >
                     <X className="h-4 w-4" />
                   </Button>
@@ -262,16 +338,18 @@ export function MermaidDiagram({ chart, className = '' }: MermaidProps) {
               </div>
             </div>
             <div 
-              className="w-full h-[calc(100vh-2.5rem)] overflow-hidden bg-muted/50"
+              ref={fullscreenRef}
+              className="w-full h-[calc(100vh-2.5rem)] overflow-hidden bg-background flex items-center justify-center p-5"
+              style={{ 
+                cursor: isPanning ? 'grabbing' : 'grab',
+                touchAction: 'none'
+              }}
               onMouseDown={handleMouseDownFullscreen}
               onMouseMove={handleMouseMoveFullscreen}
               onMouseUp={handleMouseUp}
               onMouseLeave={handleMouseUp}
               onWheel={(e) => handleWheel(e, true)}
-              style={{ cursor: fullscreenScale > 1 ? 'grab' : 'default' }}
-            >
-              <div ref={fullscreenRef} className="w-full h-full flex items-center justify-center" />
-            </div>
+            />
           </DialogContent>
         </Dialog>
       </div>
