@@ -238,3 +238,7 @@ ol {
 div[role="alert"] {
   @apply mb-4;
 }
+
+div[role="alert"] a {
+  @apply inline-block;
+}

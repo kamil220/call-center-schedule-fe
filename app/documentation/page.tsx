@@ -4,7 +4,7 @@ import { useEffect, useState, useRef } from 'react';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { ChevronLeft, Menu, FileText, BookOpen, Moon, Sun } from 'lucide-react';
+import { ChevronLeft, Menu, FileText, BookOpen } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { DocumentationContent } from '../../components/documentation-content';
 
@@ -14,21 +14,7 @@ export default function DocumentationPage() {
   const [mainHeadings, setMainHeadings] = useState<Array<{id: string, text: string, level: number, icon?: string}>>([]);
   const contentRef = useRef<HTMLDivElement>(null);
   const [activeSectionId, setActiveSectionId] = useState<string>("");
-  const [isDarkMode, setIsDarkMode] = useState(false);
 
-  useEffect(() => {
-    const isDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
-    setIsDarkMode(isDark);
-  }, []);
-
-  const toggleTheme = () => {
-    const newDarkMode = !isDarkMode;
-    setIsDarkMode(newDarkMode);
-    
-    if (contentRef.current) {
-      window.location.reload();
-    }
-  };
 
   useEffect(() => {
     const timer = setTimeout(() => {
@@ -181,10 +167,13 @@ export default function DocumentationPage() {
       </aside>
       
       <div className={cn(
-        "flex-1 overflow-auto", 
+        "flex-1 overflow-auto relative", 
         isSidebarOpen ? "md:ml-72" : "md:ml-16"
       )}>
-        <header className="sticky top-0 z-20 flex h-14 items-center gap-4 border-b bg-background px-4 md:px-6">
+        <header className={cn(
+          "fixed right-0 left-0 top-0 z-20 flex h-14 items-center gap-4 border-b bg-background px-4 md:px-6 transition-all duration-300 ease-in-out",
+          isSidebarOpen ? "md:left-72" : "md:left-16"
+        )}>
           <Button
             variant="ghost"
             size="icon"
@@ -194,28 +183,16 @@ export default function DocumentationPage() {
             <Menu className="h-5 w-5" />
           </Button>
           <div className="flex items-center text-sm text-muted-foreground">
-            <Link href="/" className="hover:text-foreground">
-              Home
-            </Link>
-            <ChevronLeft className="mx-1 h-4 w-4 rotate-[-90deg]" />
             <span className="text-foreground font-medium">{activeSection}</span>
           </div>
           <div className="ml-auto flex items-center gap-2">
-            <Button 
-              variant="ghost" 
-              size="icon" 
-              onClick={toggleTheme}
-              title={isDarkMode ? "Switch to light mode" : "Switch to dark mode"}
-            >
-              {isDarkMode ? <Sun className="h-5 w-5" /> : <Moon className="h-5 w-5" />}
-            </Button>
             <Link href="/" className="hidden sm:flex">
               <Button variant="outline">Back to Login</Button>
             </Link>
           </div>
         </header>
         
-        <main className="flex-1 px-4 py-6 md:px-6 lg:px-8">
+        <main className="flex-1 mt-6 px-4 py-6 md:px-6 lg:px-8">
           <div ref={contentRef} className="prose prose-slate max-w-4xl mx-auto">
             <DocumentationContent />
           </div>
