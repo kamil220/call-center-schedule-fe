@@ -1,12 +1,63 @@
 'use client';
 
 import { useEffect } from 'react';
+import { MermaidDiagram } from './mermaid-diagram';
+
+// Przykładowe diagramy Mermaid
+const flowchartExample = `%%{init: {'theme':'neutral', 'themeVariables': { 'primaryColor': '#d4d0ff', 'primaryTextColor': '#323232'}}}%%
+graph TD
+    A[Start] --> B{Is User Authenticated?}
+    B -->|Yes| C[Dashboard Page]
+    B -->|No| D[Login Page]
+    C --> E[Display Role-Based Content]
+    D --> F[User Authentication]
+    F --> B
+`;
+
+const sequenceDiagramExample = `%%{init: {'theme':'neutral', 'themeVariables': { 'primaryColor': '#d4d0ff', 'primaryTextColor': '#323232'}}}%%
+sequenceDiagram
+    participant User
+    participant Browser
+    participant AuthService
+    participant API
+    
+    User->>Browser: Enter Credentials
+    Browser->>AuthService: Login Request
+    AuthService->>API: Validate Credentials
+    API-->>AuthService: Authentication Token
+    AuthService-->>Browser: Store Token & User Data
+    Browser-->>User: Redirect to Dashboard
+`;
+
+const classDiagramExample = `%%{init: {'theme':'neutral', 'themeVariables': { 'primaryColor': '#d4d0ff', 'primaryTextColor': '#323232'}}}%%
+classDiagram
+    class AuthStore {
+        +user: User|null
+        +isAuthenticated: boolean
+        +login(credentials)
+        +logout()
+        +checkAuth()
+    }
+    
+    class User {
+        +id: string
+        +name: string
+        +email: string
+        +role: string
+        +permissions: string[]
+    }
+    
+    class RoleGuard {
+        +allowedRoles: string[]
+        +checkAccess(user)
+    }
+    
+    AuthStore --> User : manages
+    RoleGuard --> User : validates
+`;
 
 export function DocumentationContent() {
-  // Optionally add JS effect initialization here if needed
   useEffect(() => {
-    // Add any JS initialization for documentation content
-    // For example, highlight code blocks, etc.
   }, []);
 
   return (
@@ -26,6 +77,13 @@ export function DocumentationContent() {
         is handled through custom hooks and Zustand stores.
       </p>
       
+      <h3 id="application-flow">Application Flow</h3>
+      <p>
+        The diagram below illustrates the basic authentication flow in the application:
+      </p>
+      
+      <MermaidDiagram chart={flowchartExample} />
+      
       <h3 id="frontend-stack">Frontend Stack</h3>
       <ul>
         <li>Next.js 14 (App Router)</li>
@@ -41,6 +99,13 @@ export function DocumentationContent() {
         Roles and permissions are handled through a custom authorization system.
       </p>
       
+      <h4 id="auth-sequence">Authentication Sequence</h4>
+      <p>
+        The following sequence diagram shows the authentication process:
+      </p>
+      
+      <MermaidDiagram chart={sequenceDiagramExample} />
+      
       <h2 id="features">Features</h2>
       
       <h3 id="role-based-access">Role-based Access Control</h3>
@@ -54,6 +119,13 @@ export function DocumentationContent() {
         <li><strong>Manager:</strong> Team management and reporting capabilities</li>
         <li><strong>Agent:</strong> Customer service and ticket handling</li>
       </ul>
+      
+      <h3 id="class-structure">Class Structure</h3>
+      <p>
+        The core authentication and authorization classes are organized as follows:
+      </p>
+      
+      <MermaidDiagram chart={classDiagramExample} />
       
       <h3 id="responsive-design">Responsive Design</h3>
       <p>
