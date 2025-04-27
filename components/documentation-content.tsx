@@ -57,6 +57,16 @@ export function DocumentationContent() {
         text="Cel Dokumentu" 
       />
       
+      <div className="w-full aspect-video mb-8 rounded-lg overflow-hidden border border-gray-200 shadow-md">
+        <video 
+          controls
+          className="w-full h-full object-cover"
+        >
+          <source src="/telemedi_intro.mp4" type="video/mp4" />
+          Your browser does not support the video tag.
+        </video>
+      </div>
+
       <p>Cześć! 👋</p>
 
       <p>
