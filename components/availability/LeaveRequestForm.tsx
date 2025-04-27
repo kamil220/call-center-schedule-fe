@@ -65,8 +65,11 @@ export function LeaveRequestForm({ selectedDate, employmentType, onClose, userId
       toast.success("Leave request submitted successfully");
       onClose();
     } catch (error) {
-      console.error("Error submitting leave request:", error);
-      toast.error("Failed to submit leave request");
+      if (error instanceof Error) {
+        toast.error(error.message);
+      } else {
+        toast.error("An unexpected error occurred");
+      }
     } finally {
       setIsSubmitting(false);
     }
