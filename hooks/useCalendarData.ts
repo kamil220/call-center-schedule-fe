@@ -5,7 +5,8 @@ import { toast } from "sonner";
 
 import { formatDateForApi } from "@/lib/calendarUtils";
 import { calendarService } from "@/services/calendar.service";
-import type { Holiday, ScheduleEntry } from "@/types/calendar.types";
+import type { ScheduleEntry } from "@/types/calendar.types";
+import type { Holiday } from "@/types/calendar/api.types";
 
 export function useCalendarData(userId: string) {
   const [selectedRange, setSelectedRange] = useState<DateRange | undefined>();
