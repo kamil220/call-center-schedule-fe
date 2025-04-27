@@ -11,6 +11,15 @@ import { PaginationParams } from '../common/collection.type';
 export { type UserDto } from '../auth/api.types'; 
 
 /**
+ * Employment types as defined by the API
+ */
+export enum ApiEmploymentType {
+  EMPLOYMENT_CONTRACT = 'employment_contract',
+  CIVIL_CONTRACT = 'civil_contract',
+  CONTRACTOR = 'contractor'
+}
+
+/**
  * Raw API User Data as received from the API with roles array.
  * This represents the actual shape of user data from the API,
  * before it's mapped to the domain User model.
@@ -23,12 +32,13 @@ export interface ApiUser {
   fullName: string;
   roles: string[]; // API returns roles as string array (e.g., ["ROLE_ADMIN"])
   active: boolean;
-  hireDate?: string | null; // ISO date string format
-  manager?: {
+  hireDate: string | null;
+  manager: {
     id: string;
     fullName: string;
     email: string;
   } | null;
+  employmentType: ApiEmploymentType | null;
 }
 
 /**

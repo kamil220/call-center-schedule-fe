@@ -12,7 +12,8 @@ import {
   PaginatedResponse,
   UserDto,
   UserListParamsDto,
-  CreateUserRequestDto
+  CreateUserRequestDto,
+  ApiUser
 } from '@/types'; 
 
 // Constants
@@ -160,6 +161,15 @@ export const usersApi = {
 
     // API returns PaginatedResponse of UserDto
     return api.get<PaginatedResponse<UserDto>>(endpoint);
+  },
+  
+  /**
+   * Get a single user by ID
+   * @param id - User ID
+   * @returns User data
+   */
+  getUser: (id: string): Promise<ApiUser> => {
+    return api.get<ApiUser>(`/users/${id}`);
   },
   
   /**

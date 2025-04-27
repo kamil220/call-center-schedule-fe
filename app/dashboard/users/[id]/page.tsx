@@ -11,6 +11,9 @@ import { Card } from "@/components/ui/card";
 import { useState, useEffect } from "react";
 import { EmploymentType, WorkLine, SkillCategory, LeaveRequestStatus, Rating } from "@/types/users/domain.types";
 import { SiteHeader } from "@/components/site-header";
+import { usersApi } from "@/services/api";
+import { ApiUser, ApiEmploymentType } from "@/types";
+import { toast } from "sonner";
 
 // Mock data - replace with API calls later
 const mockEmploymentDetails = {
@@ -18,11 +21,6 @@ const mockEmploymentDetails = {
   requiredHours: 160,
   vacationDays: 26,
   vacationDaysUsed: 12,
-};
-
-const mockUserData = {
-  firstName: "John",
-  lastName: "Smith",
 };
 
 const mockLeaveRequests = [
@@ -228,6 +226,20 @@ const mockEvaluations = [
   },
 ];
 
+// Map API employment type to domain employment type
+const mapEmploymentType = (type: ApiEmploymentType | null): EmploymentType => {
+  switch (type) {
+    case ApiEmploymentType.EMPLOYMENT_CONTRACT:
+      return EmploymentType.UOP;
+    case ApiEmploymentType.CIVIL_CONTRACT:
+      return EmploymentType.UZ;
+    case ApiEmploymentType.CONTRACTOR:
+      return EmploymentType.B2B;
+    default:
+      return EmploymentType.B2B; // Default fallback
+  }
+};
+
 export default function UserAvailabilityPage({ params }: { params: Promise<{ id: string }> }) {
   // Unwrap params with React.use()
   const unwrappedParams = React.use(params);
@@ -238,15 +250,36 @@ export default function UserAvailabilityPage({ params }: { params: Promise<{ id:
   const [weeklySchedule] = useState(mockWeeklySchedule);
   const [skills] = useState(mockSkills);
   const [evaluations] = useState(mockEvaluations);
+  const [userData, setUserData] = useState<ApiUser | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    // TODO: Fetch all data from API
-    // For now using mock data
+    const fetchUserData = async () => {
+      try {
+        const data = await usersApi.getUser(userId);
+        setUserData(data);
+      } catch (error) {
+        console.error('Error fetching user data:', error);
+        toast.error('Failed to load user data');
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    fetchUserData();
   }, [userId]);
+
+  if (isLoading) {
+    return <div>Loading...</div>;
+  }
+
+  if (!userData) {
+    return <div>User not found</div>;
+  }
 
   return (
     <>
-      <SiteHeader title="Employee Profile" />
+      <SiteHeader title={`${userData.fullName}'s Profile`} />
       <div className="flex flex-1 flex-col">
         <div className="@container/main flex flex-1 flex-col gap-2">
           <div className="flex flex-col gap-4 py-4 md:gap-6 md:py-6">            
@@ -263,9 +296,12 @@ export default function UserAvailabilityPage({ params }: { params: Promise<{ id:
                 {/* Right column - Employment Info, Leave Requests, Skills, and Evaluation */}
                 <div className="col-span-5 space-y-6">
                   <EmploymentInfo 
-                    employmentDetails={employmentDetails} 
-                    firstName={mockUserData.firstName}
-                    lastName={mockUserData.lastName}
+                    employmentDetails={{
+                      ...employmentDetails,
+                      type: mapEmploymentType(userData.employmentType)
+                    }}
+                    firstName={userData.firstName}
+                    lastName={userData.lastName}
                   />
                   <LeaveRequests requests={leaveRequests} />
                   <UserSkills skills={skills} />
