@@ -31,6 +31,24 @@ export enum ApiLeaveType {
 }
 
 /**
+ * Skill data as received from the API
+ */
+export interface ApiSkill {
+  id: number;
+  name: string;
+  level: number;
+}
+
+/**
+ * Skill category with its skills as received from the API
+ */
+export interface ApiSkillCategory {
+  id: number;
+  name: string;
+  skills: ApiSkill[];
+}
+
+/**
  * Raw API User Data as received from the API with roles array.
  * This represents the actual shape of user data from the API,
  * before it's mapped to the domain User model.
@@ -50,6 +68,7 @@ export interface ApiUser {
     email: string;
   } | null;
   employmentType: ApiEmploymentType | null;
+  skills: ApiSkillCategory[]; // Add skills to ApiUser interface
 }
 
 /**

@@ -141,12 +141,7 @@ export interface WeeklyScheduleEntry {
 }
 
 // Skill category
-export enum SkillCategory {
-  SALES = 'sales',
-  CUSTOMER_SERVICE = 'customer_service',
-  TECHNICAL = 'technical',
-  ADMIN = 'admin'
-}
+export type SkillCategory = 'sales' | 'customer service' | 'technical' | 'administration';
 
 // Skill tag
 export interface SkillTag {

@@ -5,6 +5,8 @@
  * related to authentication.
  */
 
+import { ApiEmploymentType, ApiSkillCategory } from '../users/api.types';
+
 // Login request DTO
 export interface LoginRequestDto {
   email: string;
@@ -21,6 +23,14 @@ export interface UserDto {
   fullName: string;
   roles: string[]; // Roles as strings (e.g., 'ROLE_ADMIN') from API
   active: boolean;
+  hireDate: string | null;
+  manager: {
+    id: string;
+    fullName: string;
+    email: string;
+  } | null;
+  employmentType: ApiEmploymentType | null;
+  skills: ApiSkillCategory[];
 }
 
 // Login response DTO

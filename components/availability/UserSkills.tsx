@@ -2,18 +2,18 @@
 
 import { Card } from "@/components/ui/card";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { UserSkill, SkillCategory } from "@/types/users/domain.types";
+import { UserSkill } from "@/types/users/domain.types";
 import { Award, Star, StarOff } from "lucide-react";
 
 interface UserSkillsProps {
   skills: UserSkill[];
 }
 
-const categoryLabels = {
-  [SkillCategory.SALES]: "Sales",
-  [SkillCategory.CUSTOMER_SERVICE]: "Customer Service",
-  [SkillCategory.TECHNICAL]: "Technical",
-  [SkillCategory.ADMIN]: "Administration",
+const categoryLabels: Record<string, string> = {
+  "sales": "Sales",
+  "customer service": "Customer Service",
+  "technical": "Technical",
+  "administration": "Administration",
 };
 
 function StarRating({ rating }: { rating: number }) {
@@ -34,7 +34,7 @@ function StarRating({ rating }: { rating: number }) {
 
 export function UserSkills({ skills }: UserSkillsProps) {
   // Group skills by category
-  const skillsByCategory = skills.reduce<Record<SkillCategory, UserSkill[]>>(
+  const skillsByCategory = skills.reduce<Record<string, UserSkill[]>>(
     (acc, skill) => {
       const category = skill.skillTag.category;
       if (!acc[category]) {
@@ -43,7 +43,7 @@ export function UserSkills({ skills }: UserSkillsProps) {
       acc[category].push(skill);
       return acc;
     },
-    {} as Record<SkillCategory, UserSkill[]>
+    {}
   );
 
   return (
@@ -61,7 +61,7 @@ export function UserSkills({ skills }: UserSkillsProps) {
               {Object.entries(skillsByCategory).map(([category, categorySkills], index, array) => (
                 <div key={category}>
                   <h3 className="text-sm text-muted-foreground mb-2">
-                    {categoryLabels[category as SkillCategory]}
+                    {categoryLabels[category] || category}
                   </h3>
                   <div className="space-y-2">
                     {categorySkills.map((skill) => (

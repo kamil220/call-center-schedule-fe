@@ -9,11 +9,12 @@ import { UserSkills } from "@/components/availability/UserSkills";
 import { UserEvaluation } from "@/components/availability/UserEvaluation";
 import { Card } from "@/components/ui/card";
 import { useState, useEffect } from "react";
-import { EmploymentType, WorkLine, SkillCategory, LeaveRequestStatus, Rating } from "@/types/users/domain.types";
+import { EmploymentType, WorkLine, LeaveRequestStatus, Rating } from "@/types/users/domain.types";
 import { SiteHeader } from "@/components/site-header";
 import { usersApi } from "@/services/api";
 import { ApiUser, ApiEmploymentType } from "@/types";
 import { toast } from "sonner";
+import { mapSkillsToDomain } from "@/types/mappers";
 
 // Mock data - replace with API calls later
 const mockLeaveRequests = [
@@ -99,97 +100,6 @@ const mockWeeklySchedule = [
   },
 ];
 
-const mockSkills = [
-  {
-    skillTag: {
-      id: "1",
-      name: "Basic Customer Service",
-      category: SkillCategory.CUSTOMER_SERVICE,
-    },
-    rating: 5 as Rating,
-  },
-  {
-    skillTag: {
-      id: "2",
-      name: "Complaint Resolution",
-      category: SkillCategory.CUSTOMER_SERVICE,
-    },
-    rating: 4 as Rating,
-  },
-  {
-    skillTag: {
-      id: "3",
-      name: "Phone Support",
-      category: SkillCategory.CUSTOMER_SERVICE,
-    },
-    rating: 3 as Rating,
-  },
-  {
-    skillTag: {
-      id: "4",
-      name: "Medical Products Sales",
-      category: SkillCategory.SALES,
-    },
-    rating: 4 as Rating,
-  },
-  {
-    skillTag: {
-      id: "5",
-      name: "Lead Generation",
-      category: SkillCategory.SALES,
-    },
-    rating: 3 as Rating,
-  },
-  {
-    skillTag: {
-      id: "6",
-      name: "Contract Negotiation",
-      category: SkillCategory.SALES,
-    },
-    rating: 2 as Rating,
-  },
-  {
-    skillTag: {
-      id: "7",
-      name: "CRM Systems",
-      category: SkillCategory.TECHNICAL,
-    },
-    rating: 5 as Rating,
-  },
-  {
-    skillTag: {
-      id: "8",
-      name: "Technical Documentation",
-      category: SkillCategory.TECHNICAL,
-    },
-    rating: 3 as Rating,
-  },
-  {
-    skillTag: {
-      id: "9",
-      name: "Data Analysis",
-      category: SkillCategory.TECHNICAL,
-    },
-    rating: 4 as Rating,
-  },
-  {
-    skillTag: {
-      id: "10",
-      name: "Project Management",
-      category: SkillCategory.ADMIN,
-    },
-    rating: 4 as Rating,
-  },
-  {
-    skillTag: {
-      id: "11",
-      name: "Team Coordination",
-      category: SkillCategory.ADMIN,
-    },
-    rating: 5 as Rating,
-  }
-];
-
 const mockEvaluations = [
   {
     id: "1",
@@ -234,13 +144,11 @@ const mapEmploymentType = (type: ApiEmploymentType | null): EmploymentType => {
 };
 
 export default function UserAvailabilityPage({ params }: { params: Promise<{ id: string }> }) {
-  // Unwrap params with React.use()
   const unwrappedParams = React.use(params);
   const userId = unwrappedParams.id;
   
   const [leaveRequests] = useState(mockLeaveRequests);
   const [weeklySchedule] = useState(mockWeeklySchedule);
-  const [skills] = useState(mockSkills);
   const [evaluations] = useState(mockEvaluations);
   const [userData, setUserData] = useState<ApiUser | null>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -268,6 +176,9 @@ export default function UserAvailabilityPage({ params }: { params: Promise<{ id:
   if (!userData) {
     return <div>User not found</div>;
   }
+
+  // Map API skills to domain skills
+  const userSkills = mapSkillsToDomain(userData.skills);
 
   return (
     <>
@@ -298,7 +209,7 @@ export default function UserAvailabilityPage({ params }: { params: Promise<{ id:
                     lastName={userData.lastName}
                   />
                   <LeaveRequests requests={leaveRequests} />
-                  <UserSkills skills={skills} />
+                  <UserSkills skills={userSkills} />
                   <UserEvaluation evaluations={evaluations} />
                 </div>
               </div>

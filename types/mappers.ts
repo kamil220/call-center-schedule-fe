@@ -6,7 +6,8 @@
  */
 
 import { UserDto } from './auth/api.types'; // Using the re-exported UserDto
-import { User, UserRole, UserStatus } from './users/domain.types';
+import { User, UserRole, UserStatus, UserSkill } from './users/domain.types';
+import { ApiSkillCategory } from './users/api.types';
 
 /**
  * Maps the API UserRole string (e.g., 'ROLE_ADMIN') to the domain UserRole enum.
@@ -44,20 +45,29 @@ export const mapApiRoleToDomain = (apiRoles: string[]): UserRole => {
 };
 
 /**
+ * Maps API skills to domain UserSkill array
+ */
+export const mapSkillsToDomain = (apiSkillCategories: ApiSkillCategory[] = []): UserSkill[] => {
+  return apiSkillCategories.flatMap(category => 
+    category.skills.map(skill => ({
+      skillTag: {
+        id: skill.id.toString(),
+        name: skill.name,
+        category: category.name.toLowerCase() // Use category name directly from API
+      },
+      rating: skill.level as 1 | 2 | 3 | 4 | 5 // Cast to Rating type
+    }))
+  );
+};
+
+/**
  * Maps a UserDto from the API to the internal User domain model.
  * 
  * @param userDto - The user data object received from the API.
  * @returns A User object conforming to the application's domain model.
  */
 export const mapUserDtoToDomain = (userDto: UserDto): User => {
-  console.log('[Mapper] mapUserDtoToDomain - Received userDto:', JSON.stringify(userDto));
-  
-  if (!userDto.roles || !Array.isArray(userDto.roles)) {
-    console.warn('[Mapper] mapUserDtoToDomain - No roles array in userDto:', userDto);
-  }
-  
   const mappedRole = mapApiRoleToDomain(userDto.roles || []);
-  console.log('[Mapper] mapUserDtoToDomain - Mapped Role:', mappedRole, '(from API roles:', userDto.roles, ')');
 
   const domainUser = {
     id: userDto.id,
@@ -65,9 +75,10 @@ export const mapUserDtoToDomain = (userDto: UserDto): User => {
     firstName: userDto.firstName,
     lastName: userDto.lastName,
     fullName: userDto.fullName,
-    role: mappedRole, // Map roles
-    status: userDto.active ? UserStatus.ACTIVE : UserStatus.INACTIVE, // Map active to status enum
+    role: mappedRole,
+    status: userDto.active ? UserStatus.ACTIVE : UserStatus.INACTIVE,
+    skills: mapSkillsToDomain(userDto.skills), // Map skills from API to domain model
   };
-  console.log('[Mapper] mapUserDtoToDomain - Returning Domain User:', JSON.stringify(domainUser));
+
   return domainUser;
 }; 
