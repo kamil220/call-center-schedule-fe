@@ -9,6 +9,8 @@ import { useCalendarData } from "@/hooks/useCalendarData";
 import { formatDateForApi } from "@/lib/calendarUtils";
 import { useState } from "react";
 import { AvailabilityModal } from "@/components/availability/AvailabilityModal";
+import { isBefore, startOfToday } from "date-fns";
+import { toast } from "sonner";
 
 interface UserAvailabilityCalendarProps {
   userId: string;
@@ -31,6 +33,12 @@ export function UserAvailabilityCalendar({ userId }: UserAvailabilityCalendarPro
 
   const handleDateSelectForDialog = (date: Date | undefined) => {
     if (!date) return;
+
+    const today = startOfToday();
+    if (isBefore(date, today)) {
+      toast.error("Cannot set availability for past dates");
+      return;
+    }
 
     const publicHoliday = findHolidayForDate(date);
     if (publicHoliday) return;
