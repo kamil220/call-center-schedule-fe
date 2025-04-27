@@ -24,14 +24,16 @@ import { DateRange } from "react-day-picker";
 import { format, isBefore, startOfToday } from "date-fns";
 import { CalendarIcon } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { leaveRequestsService } from "@/services/leave-requests.service";
 
 interface LeaveRequestFormProps {
   selectedDate?: Date;
   employmentType: ApiEmploymentType;
   onClose: () => void;
+  userId?: string;
 }
 
-export function LeaveRequestForm({ selectedDate, employmentType, onClose }: LeaveRequestFormProps) {
+export function LeaveRequestForm({ selectedDate, employmentType, onClose, userId }: LeaveRequestFormProps) {
   const [dateRange, setDateRange] = useState<DateRange | undefined>({
     from: selectedDate,
     to: selectedDate,
@@ -43,9 +45,7 @@ export function LeaveRequestForm({ selectedDate, employmentType, onClose }: Leav
   const { leaveTypes } = useAvailableLeaveTypes(employmentType);
   const today = startOfToday();
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    
+  const handleSubmit = async () => {
     if (!dateRange?.from || !dateRange?.to || !leaveType) {
       toast.error("Please fill in all required fields");
       return;
@@ -54,8 +54,14 @@ export function LeaveRequestForm({ selectedDate, employmentType, onClose }: Leav
     setIsSubmitting(true);
 
     try {
-      // TODO: API call to submit leave request
-      await new Promise(resolve => setTimeout(resolve, 1000)); // Simulate API call
+      await leaveRequestsService.create({
+        type: leaveType,
+        startDate: format(dateRange.from, "yyyy-MM-dd"),
+        endDate: format(dateRange.to, "yyyy-MM-dd"),
+        reason: comment || undefined,
+        userId: userId,
+      });
+      
       toast.success("Leave request submitted successfully");
       onClose();
     } catch (error) {

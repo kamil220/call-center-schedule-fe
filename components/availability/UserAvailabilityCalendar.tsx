@@ -30,7 +30,8 @@ export function UserAvailabilityCalendar({ userId, employmentType }: UserAvailab
     currentMonth,
     findHolidayForDate,
     handleMonthChange,
-    goToToday
+    goToToday,
+    refreshData
   } = useCalendarData(userId);
 
   const handleDateSelectForDialog = (date: Date | undefined) => {
@@ -52,6 +53,11 @@ export function UserAvailabilityCalendar({ userId, employmentType }: UserAvailab
   const handleCloseModal = () => {
     setIsModalOpen(false);
     setSelectedDateForModal(undefined);
+  };
+
+  const handleSuccess = () => {
+    refreshData();
+    handleCloseModal();
   };
 
   return (
@@ -125,8 +131,10 @@ export function UserAvailabilityCalendar({ userId, employmentType }: UserAvailab
       <AvailabilityModal
         isOpen={isModalOpen}
         onClose={handleCloseModal}
+        onSuccess={handleSuccess}
         selectedDate={selectedDateForModal}
         employmentType={employmentType}
+        userId={userId}
       />
     </div>
   );

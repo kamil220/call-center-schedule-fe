@@ -14,11 +14,20 @@ type FormType = "availability" | "leave";
 interface AvailabilityModalProps {
   isOpen: boolean;
   onClose: () => void;
+  onSuccess: () => void;
   selectedDate?: Date;
   employmentType: ApiEmploymentType;
+  userId: string;
 }
 
-export function AvailabilityModal({ isOpen, onClose, selectedDate, employmentType }: AvailabilityModalProps) {
+export function AvailabilityModal({ 
+  isOpen, 
+  onClose, 
+  onSuccess,
+  selectedDate, 
+  employmentType, 
+  userId 
+}: AvailabilityModalProps) {
   const [step, setStep] = useState<Step>(1);
   const [formType, setFormType] = useState<FormType | null>(null);
 
@@ -26,6 +35,11 @@ export function AvailabilityModal({ isOpen, onClose, selectedDate, employmentTyp
     setStep(1);
     setFormType(null);
     onClose();
+  };
+
+  const handleSuccess = () => {
+    onSuccess();
+    handleClose();
   };
 
   const handleTypeSelect = (type: FormType) => {
@@ -67,12 +81,13 @@ export function AvailabilityModal({ isOpen, onClose, selectedDate, employmentTyp
 
   const renderStep2 = () => {
     if (formType === "availability") {
-      return <AvailabilityForm selectedDate={selectedDate} onClose={handleClose} />;
+      return <AvailabilityForm selectedDate={selectedDate} onClose={handleSuccess} />;
     }
     return <LeaveRequestForm 
       selectedDate={selectedDate} 
       employmentType={employmentType}
-      onClose={handleClose} 
+      onClose={handleSuccess}
+      userId={userId}
     />;
   };
 

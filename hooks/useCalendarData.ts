@@ -1,91 +1,63 @@
-import { useState, useEffect } from "react";
-import { startOfMonth, endOfMonth } from "date-fns";
+import { useState, useEffect, useCallback } from "react";
+import { startOfMonth, endOfMonth, format } from "date-fns";
 import type { DateRange } from "react-day-picker";
+import { toast } from "sonner";
 
 import { formatDateForApi } from "@/lib/calendarUtils";
 import { calendarService } from "@/services/calendar.service";
-import type { Holiday, ScheduleEntry, AvailabilityMeta } from "@/types/calendar.types";
+import type { Holiday, ScheduleEntry } from "@/types/calendar.types";
 
 export function useCalendarData(userId: string) {
   const [selectedRange, setSelectedRange] = useState<DateRange | undefined>();
   const [scheduleEntries, setScheduleEntries] = useState<Map<string, ScheduleEntry[]>>(new Map());
   const [holidays, setHolidays] = useState<Holiday[]>([]);
-  const [isLoadingHolidays, setIsLoadingHolidays] = useState(false);
-  const [isLoadingAvailability, setIsLoadingAvailability] = useState(false);
+  const [isLoadingHolidays, setIsLoadingHolidays] = useState(true);
+  const [isLoadingAvailability, setIsLoadingAvailability] = useState(true);
   const [currentYear, setCurrentYear] = useState(new Date().getFullYear());
   const [currentMonth, setCurrentMonth] = useState<Date>(new Date());
 
-  // Fetch holidays when the year changes
-  useEffect(() => {
-    async function fetchHolidays() {
-      setIsLoadingHolidays(true);
-      try {
-        const holidayData = (await calendarService.getHolidays(currentYear)) as unknown as Holiday[];
-        setHolidays(holidayData);
-      } catch (error) {
-        console.error("Failed to fetch holidays:", error);
-      } finally {
-        setIsLoadingHolidays(false);
-      }
-    }
+  const fetchData = useCallback(async () => {
+    setIsLoadingAvailability(true);
+    try {
+      const response = await calendarService.getUserAvailability(
+        userId,
+        format(startOfMonth(currentMonth), 'yyyy-MM-dd'),
+        format(endOfMonth(currentMonth), 'yyyy-MM-dd')
+      );
 
-    fetchHolidays();
+      const entriesMap = new Map<string, ScheduleEntry[]>();
+      response.forEach(entry => {
+        const dateKey = formatDateForApi(new Date(entry.date));
+        const existingEntries = entriesMap.get(dateKey) || [];
+        entriesMap.set(dateKey, [...existingEntries, entry as ScheduleEntry]);
+      });
+
+      setScheduleEntries(entriesMap);
+    } catch (error) {
+      console.error('Error fetching availability:', error);
+      toast.error('Failed to load availability data');
+    } finally {
+      setIsLoadingAvailability(false);
+    }
+  }, [userId, currentMonth]);
+
+  const fetchHolidays = useCallback(async () => {
+    setIsLoadingHolidays(true);
+    try {
+      const response = await calendarService.getHolidays(currentYear);
+      setHolidays(response as Holiday[]);
+    } catch (error) {
+      console.error('Error fetching holidays:', error);
+      toast.error('Failed to load holiday data');
+    } finally {
+      setIsLoadingHolidays(false);
+    }
   }, [currentYear]);
 
-  // Fetch user availability when month or user changes
   useEffect(() => {
-    async function fetchUserAvailability() {
-      if (!userId) return;
-      
-      setIsLoadingAvailability(true);
-      try {
-        const firstDayOfMonth = startOfMonth(currentMonth);
-        const dayOfWeek = firstDayOfMonth.getDay();
-        const daysToSubtract = dayOfWeek === 0 ? 6 : dayOfWeek - 1;
-        const firstVisibleDay = new Date(firstDayOfMonth);
-        firstVisibleDay.setDate(firstDayOfMonth.getDate() - daysToSubtract);
-        
-        const lastDayOfMonth = endOfMonth(currentMonth);
-        const lastDayOfWeekday = lastDayOfMonth.getDay(); 
-        const daysToAdd = lastDayOfWeekday === 0 ? 0 : 7 - lastDayOfWeekday;
-        const lastVisibleDay = new Date(lastDayOfMonth);
-        lastVisibleDay.setDate(lastDayOfMonth.getDate() + daysToAdd);
-        
-        const startDateFormatted = formatDateForApi(firstVisibleDay);
-        const endDateFormatted = formatDateForApi(lastVisibleDay);
-        
-        const scheduleData = (await calendarService.getUserAvailability(
-          userId,
-          startDateFormatted,
-          endDateFormatted
-        )) as unknown as ScheduleEntry[]; 
-        
-        const entriesMap = new Map<string, ScheduleEntry[]>();
-        scheduleData.forEach(entry => {
-          const dateKey = entry.date; 
-          const entriesForDate = entriesMap.get(dateKey) || [];
-          entriesForDate.push(entry);
-          entriesForDate.sort((a, b) => {
-             if (a.type === 'available' && b.type !== 'available') return -1;
-             if (a.type !== 'available' && b.type === 'available') return 1;
-             if (a.type === 'available' && b.type === 'available') {
-               return (a.meta as AvailabilityMeta).startTime.localeCompare((b.meta as AvailabilityMeta).startTime);
-             }
-             return 0;
-          });
-          entriesMap.set(dateKey, entriesForDate);
-        });
-        
-        setScheduleEntries(entriesMap);
-      } catch (error) {
-        console.error("Failed to fetch user schedule:", error);
-      } finally {
-        setIsLoadingAvailability(false);
-      }
-    }
-
-    fetchUserAvailability();
-  }, [userId, currentMonth]);
+    fetchData();
+    fetchHolidays();
+  }, [fetchData, fetchHolidays]);
 
   const findHolidayForDate = (date: Date): Holiday | null => {
     if (date.getFullYear() !== currentYear) {
@@ -111,6 +83,11 @@ export function useCalendarData(userId: string) {
     }
   };
 
+  const refreshData = useCallback(() => {
+    fetchData();
+    fetchHolidays();
+  }, [fetchData, fetchHolidays]);
+
   return {
     selectedRange,
     setSelectedRange,
@@ -122,6 +99,7 @@ export function useCalendarData(userId: string) {
     currentMonth,
     findHolidayForDate,
     handleMonthChange,
-    goToToday
+    goToToday,
+    refreshData
   };
 } 
