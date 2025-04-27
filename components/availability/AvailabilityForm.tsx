@@ -124,7 +124,10 @@ export function AvailabilityForm({ selectedDate, onClose }: AvailabilityFormProp
   return (
     <div className="space-y-6">
       <div>
-        <h2 className="text-2xl font-semibold mb-4">Set Your Availability</h2>
+        <h2 className="text-2xl font-semibold mb-2">Set Your Availability</h2>
+        <p className="text-sm text-muted-foreground mb-6">
+          Note: If availability is already set for the selected date(s), it will be overwritten with the new schedule.
+        </p>
         <div className="space-y-4">
           <div>
             <h3 className="text-sm font-medium mb-2">Select Date Range</h3>

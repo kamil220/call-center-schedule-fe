@@ -1,5 +1,5 @@
-import { useState } from "react";
-import { Dialog, DialogContent } from "@/components/ui/dialog";
+import { useState, useEffect } from "react";
+import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { CalendarRange } from "lucide-react";
@@ -19,6 +19,14 @@ export function AvailabilityModal({ isOpen, onClose, selectedDate }: Availabilit
   const [step, setStep] = useState<Step>(1);
   const [formType, setFormType] = useState<FormType | null>(null);
 
+  // Reset state when modal is closed
+  useEffect(() => {
+    if (!isOpen) {
+      setStep(1);
+      setFormType(null);
+    }
+  }, [isOpen]);
+
   const handleTypeSelect = (type: FormType) => {
     setFormType(type);
     setStep(2);
@@ -27,6 +35,11 @@ export function AvailabilityModal({ isOpen, onClose, selectedDate }: Availabilit
   const handleBack = () => {
     setStep(1);
     setFormType(null);
+  };
+
+  const handleClose = () => {
+    onClose();
+    // State will be reset by useEffect when isOpen changes
   };
 
   const renderStep1 = () => (
@@ -70,14 +83,22 @@ export function AvailabilityModal({ isOpen, onClose, selectedDate }: Availabilit
 
   const renderStep2 = () => {
     if (formType === "availability") {
-      return <AvailabilityForm selectedDate={selectedDate} onClose={onClose} />;
+      return <AvailabilityForm selectedDate={selectedDate} onClose={handleClose} />;
     }
     return <div>Leave request form (coming soon)</div>;
   };
 
+  const getDialogTitle = () => {
+    if (step === 1) {
+      return "Select Action Type";
+    }
+    return formType === "availability" ? "Set Availability" : "Leave Request";
+  };
+
   return (
-    <Dialog open={isOpen} onOpenChange={onClose}>
+    <Dialog open={isOpen} onOpenChange={handleClose}>
       <DialogContent className="sm:max-w-[600px]">
+        <DialogTitle className="sr-only">{getDialogTitle()}</DialogTitle>
         {step === 1 ? (
           renderStep1()
         ) : (

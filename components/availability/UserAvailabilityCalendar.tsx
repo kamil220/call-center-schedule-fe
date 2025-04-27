@@ -16,10 +16,9 @@ interface UserAvailabilityCalendarProps {
 
 export function UserAvailabilityCalendar({ userId }: UserAvailabilityCalendarProps) {
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [selectedDateForModal, setSelectedDateForModal] = useState<Date | undefined>(undefined);
   
   const {
-    selectedRange,
-    setSelectedRange,
     scheduleEntries,
     holidays,
     isLoadingHolidays,
@@ -36,8 +35,13 @@ export function UserAvailabilityCalendar({ userId }: UserAvailabilityCalendarPro
     const publicHoliday = findHolidayForDate(date);
     if (publicHoliday) return;
 
-    setSelectedRange({ from: date, to: date });
+    setSelectedDateForModal(date);
     setIsModalOpen(true);
+  };
+
+  const handleCloseModal = () => {
+    setIsModalOpen(false);
+    setSelectedDateForModal(undefined);
   };
 
   return (
@@ -58,7 +62,7 @@ export function UserAvailabilityCalendar({ userId }: UserAvailabilityCalendarPro
       ) : (
         <Calendar
           mode="single"
-          selected={selectedRange?.from}
+          selected={selectedDateForModal}
           onSelect={handleDateSelectForDialog}
           month={currentMonth}
           onMonthChange={handleMonthChange}
@@ -110,8 +114,8 @@ export function UserAvailabilityCalendar({ userId }: UserAvailabilityCalendarPro
 
       <AvailabilityModal
         isOpen={isModalOpen}
-        onClose={() => setIsModalOpen(false)}
-        selectedDate={selectedRange?.from}
+        onClose={handleCloseModal}
+        selectedDate={selectedDateForModal}
       />
     </div>
   );
