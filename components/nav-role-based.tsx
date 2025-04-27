@@ -1,15 +1,10 @@
 import * as React from "react"
 import {
-  IconCalendarTime,
-  IconChartAreaLine,
   IconDashboard,
-  IconFileCertificate,
   IconFileReport,
   IconTimeline,
-  IconUserCircle,
   IconUsers,
-  IconListDetails,
-  IconTerminal2,
+  IconPhone,
   IconSettings,
 } from "@tabler/icons-react"
 import { usePathname } from "next/navigation"
@@ -30,6 +25,11 @@ export function NavRoleBased() {
       url: "/dashboard",
       icon: IconDashboard,
     },
+    {
+      title: "Call History",
+      url: "/dashboard/call-history",
+      icon: IconPhone,
+    },
   ]
 
   const managerMenuItems = [
@@ -37,19 +37,6 @@ export function NavRoleBased() {
       title: "Pracownicy",
       url: "/dashboard/employees",
       icon: IconUsers,
-    },
-  ]
-
-  const plannerMenuItems = [
-    {
-      title: "Raporty",
-      url: "/reports",
-      icon: IconFileReport,
-    },
-    {
-      title: "Planer",
-      url: "/planner",
-      icon: IconTimeline,
     },
   ]
 
@@ -82,10 +69,6 @@ export function NavRoleBased() {
 
     if (isTeamManager || isPlanner || isAdmin) { // Managers see their own + Agent items
       items = [...items, ...managerMenuItems];
-    }
-    
-    if (isPlanner || isAdmin) { // Planners see their own + Manager + Agent items
-      items = [...items, ...plannerMenuItems];
     }
     
     if (isAdmin) { // Admins see their own (non-admin section) + Planner + Manager + Agent items
