@@ -7,12 +7,16 @@ import { CalendarDay } from "@/components/availability/CalendarDay";
 import { CalendarSummary } from "@/components/availability/CalendarSummary";
 import { useCalendarData } from "@/hooks/useCalendarData";
 import { formatDateForApi } from "@/lib/calendarUtils";
+import { useState } from "react";
+import { AvailabilityModal } from "@/components/availability/AvailabilityModal";
 
 interface UserAvailabilityCalendarProps {
   userId: string;
 }
 
 export function UserAvailabilityCalendar({ userId }: UserAvailabilityCalendarProps) {
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  
   const {
     selectedRange,
     setSelectedRange,
@@ -33,6 +37,7 @@ export function UserAvailabilityCalendar({ userId }: UserAvailabilityCalendarPro
     if (publicHoliday) return;
 
     setSelectedRange({ from: date, to: date });
+    setIsModalOpen(true);
   };
 
   return (
@@ -101,6 +106,12 @@ export function UserAvailabilityCalendar({ userId }: UserAvailabilityCalendarPro
         scheduleEntries={scheduleEntries}
         holidays={holidays}
         currentMonth={currentMonth}
+      />
+
+      <AvailabilityModal
+        isOpen={isModalOpen}
+        onClose={() => setIsModalOpen(false)}
+        selectedDate={selectedRange?.from}
       />
     </div>
   );
