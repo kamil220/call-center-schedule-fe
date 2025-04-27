@@ -1,56 +1,40 @@
-import { useState, useEffect } from "react";
-import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
-import { Button } from "@/components/ui/button";
+"use client";
+
+import { useState } from "react";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Card } from "@/components/ui/card";
 import { CalendarRange } from "lucide-react";
-import { format } from "date-fns";
-import { AvailabilityForm } from "@/components/availability/AvailabilityForm";
+import { AvailabilityForm } from "./AvailabilityForm";
+import { LeaveRequestForm } from "./LeaveRequestForm";
+import { ApiEmploymentType } from "@/types";
+
+type Step = 1 | 2;
+type FormType = "availability" | "leave";
 
 interface AvailabilityModalProps {
   isOpen: boolean;
   onClose: () => void;
-  selectedDate: Date | undefined;
+  selectedDate?: Date;
+  employmentType: ApiEmploymentType;
 }
 
-type FormType = "availability" | "leave";
-type Step = 1 | 2;
-
-export function AvailabilityModal({ isOpen, onClose, selectedDate }: AvailabilityModalProps) {
+export function AvailabilityModal({ isOpen, onClose, selectedDate, employmentType }: AvailabilityModalProps) {
   const [step, setStep] = useState<Step>(1);
   const [formType, setFormType] = useState<FormType | null>(null);
 
-  // Reset state when modal is closed
-  useEffect(() => {
-    if (!isOpen) {
-      setStep(1);
-      setFormType(null);
-    }
-  }, [isOpen]);
+  const handleClose = () => {
+    setStep(1);
+    setFormType(null);
+    onClose();
+  };
 
   const handleTypeSelect = (type: FormType) => {
     setFormType(type);
     setStep(2);
   };
 
-  const handleBack = () => {
-    setStep(1);
-    setFormType(null);
-  };
-
-  const handleClose = () => {
-    onClose();
-    // State will be reset by useEffect when isOpen changes
-  };
-
   const renderStep1 = () => (
     <div className="space-y-6">
-      <div className="text-center mb-6">
-        <h2 className="text-2xl font-semibold mb-2">What would you like to do?</h2>
-        <p className="text-muted-foreground">
-          {selectedDate && `Selected date: ${format(selectedDate, "MMMM d, yyyy")}`}
-        </p>
-      </div>
-      
       <div className="grid grid-cols-2 gap-4">
         <Card 
           className="p-6 cursor-pointer hover:border-primary transition-colors"
@@ -85,7 +69,11 @@ export function AvailabilityModal({ isOpen, onClose, selectedDate }: Availabilit
     if (formType === "availability") {
       return <AvailabilityForm selectedDate={selectedDate} onClose={handleClose} />;
     }
-    return <div>Leave request form (coming soon)</div>;
+    return <LeaveRequestForm 
+      selectedDate={selectedDate} 
+      employmentType={employmentType}
+      onClose={handleClose} 
+    />;
   };
 
   const getDialogTitle = () => {
@@ -97,22 +85,11 @@ export function AvailabilityModal({ isOpen, onClose, selectedDate }: Availabilit
 
   return (
     <Dialog open={isOpen} onOpenChange={handleClose}>
-      <DialogContent className="sm:max-w-[600px]">
-        <DialogTitle className="sr-only">{getDialogTitle()}</DialogTitle>
-        {step === 1 ? (
-          renderStep1()
-        ) : (
-          <div>
-            <Button
-              variant="ghost"
-              onClick={handleBack}
-              className="mb-4"
-            >
-              ← Back
-            </Button>
-            {renderStep2()}
-          </div>
-        )}
+      <DialogContent className="max-w-3xl">
+        <DialogHeader>
+          <DialogTitle>{getDialogTitle()}</DialogTitle>
+        </DialogHeader>
+        {step === 1 ? renderStep1() : renderStep2()}
       </DialogContent>
     </Dialog>
   );

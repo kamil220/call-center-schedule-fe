@@ -280,7 +280,10 @@ export default function UserAvailabilityPage({ params }: { params: Promise<{ id:
                 {/* Left column - Calendar and Weekly Schedule */}
                 <div className="col-span-7 space-y-6">
                   <Card className="p-4">
-                    <UserAvailabilityCalendar userId={userId} />
+                    <UserAvailabilityCalendar 
+                      userId={userId} 
+                      employmentType={userData.employmentType || ApiEmploymentType.CONTRACTOR}
+                    />
                   </Card>
                   <WeeklySchedule schedule={weeklySchedule} />
                 </div>

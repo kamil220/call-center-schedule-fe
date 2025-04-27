@@ -20,6 +20,17 @@ export enum ApiEmploymentType {
 }
 
 /**
+ * Leave types as defined by the API
+ */
+export enum ApiLeaveType {
+  SICK_LEAVE = 'sick_leave',
+  HOLIDAY = 'holiday',
+  PERSONAL_LEAVE = 'personal_leave',
+  PATERNITY_LEAVE = 'paternity_leave',
+  MATERNITY_LEAVE = 'maternity_leave'
+}
+
+/**
  * Raw API User Data as received from the API with roles array.
  * This represents the actual shape of user data from the API,
  * before it's mapped to the domain User model.

@@ -11,12 +11,14 @@ import { useState } from "react";
 import { AvailabilityModal } from "@/components/availability/AvailabilityModal";
 import { isBefore, startOfToday } from "date-fns";
 import { toast } from "sonner";
+import { ApiEmploymentType } from "@/types";
 
 interface UserAvailabilityCalendarProps {
   userId: string;
+  employmentType: ApiEmploymentType;
 }
 
-export function UserAvailabilityCalendar({ userId }: UserAvailabilityCalendarProps) {
+export function UserAvailabilityCalendar({ userId, employmentType }: UserAvailabilityCalendarProps) {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [selectedDateForModal, setSelectedDateForModal] = useState<Date | undefined>(undefined);
   
@@ -124,6 +126,7 @@ export function UserAvailabilityCalendar({ userId }: UserAvailabilityCalendarPro
         isOpen={isModalOpen}
         onClose={handleCloseModal}
         selectedDate={selectedDateForModal}
+        employmentType={employmentType}
       />
     </div>
   );
