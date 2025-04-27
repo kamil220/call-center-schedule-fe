@@ -16,13 +16,6 @@ import { ApiUser, ApiEmploymentType } from "@/types";
 import { toast } from "sonner";
 
 // Mock data - replace with API calls later
-const mockEmploymentDetails = {
-  type: EmploymentType.B2B,
-  requiredHours: 160,
-  vacationDays: 26,
-  vacationDaysUsed: 12,
-};
-
 const mockLeaveRequests = [
   {
     id: "1",
@@ -245,7 +238,6 @@ export default function UserAvailabilityPage({ params }: { params: Promise<{ id:
   const unwrappedParams = React.use(params);
   const userId = unwrappedParams.id;
   
-  const [employmentDetails] = useState(mockEmploymentDetails);
   const [leaveRequests] = useState(mockLeaveRequests);
   const [weeklySchedule] = useState(mockWeeklySchedule);
   const [skills] = useState(mockSkills);
@@ -297,7 +289,6 @@ export default function UserAvailabilityPage({ params }: { params: Promise<{ id:
                 <div className="col-span-5 space-y-6">
                   <EmploymentInfo 
                     employmentDetails={{
-                      ...employmentDetails,
                       type: mapEmploymentType(userData.employmentType)
                     }}
                     firstName={userData.firstName}
