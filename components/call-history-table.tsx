@@ -8,22 +8,13 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table"
-import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { ChevronRight } from "lucide-react"
-
-interface CallHistoryEntry {
-  id: string
-  dateTime: string
-  line: string
-  phoneNumber: string
-  operator: string
-  duration: string
-  tags: string[]
-}
+import { Call } from "@/types/calls"
+import { formatDuration } from "@/lib/formatters"
 
 interface CallHistoryTableProps {
-  data: CallHistoryEntry[]
+  data: Call[]
 }
 
 export function CallHistoryTable({ data }: CallHistoryTableProps) {
@@ -34,10 +25,10 @@ export function CallHistoryTable({ data }: CallHistoryTableProps) {
           <TableRow>
             <TableHead className="px-6">Date & Time</TableHead>
             <TableHead className="px-6">Line</TableHead>
+            <TableHead className="px-6">Line topic</TableHead>
             <TableHead className="px-6">Phone Number</TableHead>
             <TableHead className="px-6">Operator</TableHead>
             <TableHead className="px-6">Duration</TableHead>
-            <TableHead className="px-6">Tags</TableHead>
             <TableHead className="w-[50px]"></TableHead>
           </TableRow>
         </TableHeader>
@@ -49,19 +40,11 @@ export function CallHistoryTable({ data }: CallHistoryTableProps) {
               onClick={() => window.location.href = `/dashboard/call-history/${entry.id}`}
             >
               <TableCell className="px-6">{entry.dateTime}</TableCell>
-              <TableCell className="px-6">{entry.line}</TableCell>
+              <TableCell className="px-6">{entry.skillPath.name}</TableCell>
+              <TableCell className="px-6">{entry.line.name}</TableCell>
               <TableCell className="px-6">{entry.phoneNumber}</TableCell>
-              <TableCell className="px-6">{entry.operator}</TableCell>
-              <TableCell className="px-6">{entry.duration}</TableCell>
-              <TableCell className="px-6">
-                <div className="flex gap-1 flex-wrap">
-                  {entry.tags.map((tag) => (
-                    <Badge key={tag} variant="secondary">
-                      {tag}
-                    </Badge>
-                  ))}
-                </div>
-              </TableCell>
+              <TableCell className="px-6">{entry.operator.fullName}</TableCell>
+              <TableCell className="px-6">{formatDuration(entry.duration)}</TableCell>
               <TableCell>
                 <Link href={`/dashboard/call-history/${entry.id}`}>
                   <Button 

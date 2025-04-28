@@ -48,7 +48,7 @@ const roleCredentials = [
   },
   {
     role: 'Agent',
-    email: 'agent@example.com',
+    email: 'agent1@example.com',
     password: 'agent123',
     description: 'Customer service and ticket handling.'
   }

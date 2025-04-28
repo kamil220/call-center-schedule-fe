@@ -19,12 +19,12 @@ describe('AuthService', () => {
     });
 
     it('should return agent user for password "password"', async () => {
-      const credentials = { email: 'agent@example.com', password: 'password' };
+      const credentials = { email: 'agent1@example.com', password: 'password' };
       const result = await authService.login(credentials);
       
       expect(result.success).toBe(true);
       expect(result.user).toBeDefined();
-      expect(result.user?.email).toBe('agent@example.com');
+      expect(result.user?.email).toBe('agent1@example.com');
       expect(result.user?.role).toBe(UserRole.AGENT);
     });
 

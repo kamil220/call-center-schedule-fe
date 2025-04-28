@@ -4,25 +4,13 @@ import { useState, useEffect } from "react";
 import { CallHistoryTable } from "@/components/call-history-table"
 import { Card } from "@/components/ui/card"
 import { Phone } from "lucide-react"
-import { Input } from "@/components/ui/input"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Pagination } from "@/components/ui/pagination"
-import { callService, type CallDetails } from "@/services/call.service"
+import { callService } from "@/services/call.service"
 import { toast } from "sonner"
 import { Skeleton } from "@/components/ui/skeleton"
-
-// Sample data for operators and lines
-const operators = [
-  "Jack Davis",
-  "Emma Wilson",
-  "Michael Brown",
-];
-
-const lines = [
-  "Sales",
-  "Customer Service",
-  "Technical",
-];
+import { Call, GetCallsParams } from "@/types/calls";
+import { Filters } from "./components/filters";
+import { useRoleCheck } from "@/hooks/use-role-check";
 
 function CallHistoryTableSkeleton() {
   return (
@@ -44,45 +32,57 @@ function CallHistoryTableSkeleton() {
 }
 
 export default function CallHistoryPage() {
-  const [searchQuery, setSearchQuery] = useState('');
-  const [selectedLine, setSelectedLine] = useState<string | null>(null);
-  const [selectedOperator, setSelectedOperator] = useState<string | null>(null);
+  const { isAdmin, isTeamManager, isPlanner } = useRoleCheck();
   const [page, setPage] = useState(0);
-  const [pageSize, setPageSize] = useState(10);
+  const [limit, setLimit] = useState(10);
   const [isLoading, setIsLoading] = useState(true);
-  const [calls, setCalls] = useState<CallDetails[]>([]);
-
-  useEffect(() => {
-    async function loadCalls() {
-      try {
-        const data = await callService.getCalls();
-        setCalls(data);
-      } catch (error: unknown) {
-        console.error('Failed to load calls:', error);
-        toast.error("Failed to load calls");
-      } finally {
-        setIsLoading(false);
-      }
-    }
-
-    loadCalls();
-  }, []);
-
-  // Filter data based on search query and filters
-  const filteredData = calls.filter(item => {
-    const matchesSearch = !searchQuery || 
-      item.phoneNumber.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      item.operator.toLowerCase().includes(searchQuery.toLowerCase());
-    
-    const matchesLine = !selectedLine || item.line === selectedLine;
-    const matchesOperator = !selectedOperator || item.operator === selectedOperator;
-
-    return matchesSearch && matchesLine && matchesOperator;
+  const [calls, setCalls] = useState<Call[]>([]);
+  const [totalPages, setTotalPages] = useState(0);
+  const [filters, setFilters] = useState({
+    operatorId: null as string | null,
+    lineId: null as string | null,
+    skillPathId: null as number | null,
+    search: ''
   });
 
-  // Calculate pagination
-  const totalPages = Math.ceil(filteredData.length / pageSize);
-  const paginatedData = filteredData.slice(page * pageSize, (page + 1) * pageSize);
+  // Show operator filter for admin, team manager, and planner roles
+  const showOperatorFilter = isAdmin || isTeamManager || isPlanner;
+
+  // Load calls with current filters
+  const loadCalls = async (params: GetCallsParams) => {
+    try {
+      setIsLoading(true);
+      const data = await callService.getCalls({
+        page: params.page,
+        limit: params.limit,
+        phoneNumber: params.phoneNumber,
+        lineId: params.lineId ? Number(params.lineId) : undefined,
+        operatorId: params.operatorId || undefined,
+        skillPathId: params.skillPathId || undefined,
+      });
+      setCalls(data.items);
+      setTotalPages(data.totalPages);
+    } catch (error: unknown) {
+      console.error('Failed to load calls:', error);
+      toast.error("Failed to load calls");
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  // Effect to reload data when filters change
+  useEffect(() => {
+    const params: GetCallsParams = {
+      page,
+      limit,
+      phoneNumber: filters.search || undefined,
+      lineId: filters.lineId ? Number(filters.lineId) : undefined,
+      operatorId: filters.operatorId || undefined,
+      skillPathId: filters.skillPathId || undefined,
+    };
+
+    loadCalls(params);
+  }, [page, limit, filters]);
 
   return (
     <div className="container mx-auto py-8">
@@ -93,69 +93,23 @@ export default function CallHistoryPage() {
       
       <Card className="p-6">
         <div className="flex flex-col gap-6">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              <Input
-                placeholder="Search by phone number or operator..."
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className="max-w-sm"
-                disabled={isLoading}
-              />
-            </div>
-            <div className="flex items-center gap-2">
-              {/* Line filter */}
-              <Select
-                value={selectedLine || "all_lines"}
-                onValueChange={(value) => setSelectedLine(value === "all_lines" ? null : value)}
-                disabled={isLoading}
-              >
-                <SelectTrigger className="w-[180px]">
-                  <SelectValue placeholder="Filter by line" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all_lines">All Lines</SelectItem>
-                  {lines.map((line) => (
-                    <SelectItem key={line} value={line}>
-                      {line}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-
-              {/* Operator filter */}
-              <Select
-                value={selectedOperator || "all_operators"}
-                onValueChange={(value) => setSelectedOperator(value === "all_operators" ? null : value)}
-                disabled={isLoading}
-              >
-                <SelectTrigger className="w-[180px]">
-                  <SelectValue placeholder="Filter by operator" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all_operators">All Operators</SelectItem>
-                  {operators.map((operator) => (
-                    <SelectItem key={operator} value={operator}>
-                      {operator}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-          </div>
+          <Filters 
+            onFilterChange={setFilters}
+            showOperatorFilter={showOperatorFilter}
+          />
 
           {isLoading ? (
             <CallHistoryTableSkeleton />
           ) : (
-            <CallHistoryTable data={paginatedData} />
+            <CallHistoryTable data={calls} />
           )}
 
           <Pagination 
             page={page}
             totalPages={totalPages}
             onPageChange={setPage}
-            pageSize={pageSize}
-            onPageSizeChange={setPageSize}
+            pageSize={limit}
+            onPageSizeChange={setLimit}
             showPageSizeOptions
             isLoading={isLoading}
           />

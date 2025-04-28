@@ -19,4 +19,15 @@ export * from './users/domain.types';
 export * from './calendar/api.types';
 
 // Re-export mappers
-export * from './mappers'; 
+export * from './mappers';
+
+export interface Operator {
+  id: number;
+  name: string;
+}
+
+export interface Line {
+  id: number;
+  name: string;
+  number: string;
+} 

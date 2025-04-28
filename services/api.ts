@@ -13,8 +13,9 @@ import {
   UserDto,
   UserListParamsDto,
   CreateUserRequestDto,
-  ApiUser
+  ApiUser,
 } from '@/types'; 
+import { Call, GetCallsParams, GetCallsResponse, SkillPath } from '@/types/calls';
 
 // Constants
 const API_BASE_URL = '/api';
@@ -182,5 +183,41 @@ export const usersApi = {
   createUser: (userData: CreateUserRequestDto): Promise<UserDto> => {
     // API call expects CreateUserRequestDto and returns UserDto
     return api.post<UserDto, CreateUserRequestDto>('/users', userData);
+  }
+};
+
+/**
+ * Skill Paths API endpoints
+ */
+export const skillPathsApi = {
+  getSkillPaths: (): Promise<SkillPath[]> => {
+    return api.get<SkillPath[]>('/skill-paths');
+  }
+};
+
+/**
+ * Calls API endpoints
+ */
+export const callsApi = {
+  getCalls: (params?: GetCallsParams): Promise<GetCallsResponse> => {
+    // Convert params to URL query string
+    const queryParams = new URLSearchParams();
+
+    if (params) {
+      Object.entries(params).forEach(([key, value]) => {
+        if (value !== undefined) {
+          queryParams.append(key, String(value));
+        }
+      });
+    }
+
+    const queryString = queryParams.toString();
+    const endpoint = `/calls${queryString ? `?${queryString}` : ''}`;
+
+    return api.get<GetCallsResponse>(endpoint);
+  },
+
+  getCall: (id: number): Promise<Call> => {
+    return api.get<Call>(`/calls/${id}`);
   }
 };
