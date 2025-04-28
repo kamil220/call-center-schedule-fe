@@ -16,6 +16,7 @@ import {
   ApiUser,
 } from '@/types'; 
 import { Call, GetCallsParams, GetCallsResponse, SkillPath } from '@/types/calls';
+import { ForecastData } from '@/types/forecasting';
 
 // Constants
 const API_BASE_URL = '/api';
@@ -219,5 +220,22 @@ export const callsApi = {
 
   getCall: (id: number): Promise<Call> => {
     return api.get<Call>(`/calls/${id}`);
+  }
+};
+
+/**
+ * Work Schedule API endpoints
+ */
+export const workScheduleApi = {
+  /**
+   * Get forecasting data for a date range
+   */
+  getForecasts: (startDate: string, endDate: string): Promise<ForecastData> => {
+    const params = new URLSearchParams({
+      start_date: startDate,
+      end_date: endDate
+    });
+
+    return api.get<ForecastData>(`/work-schedule/forecasts?${params}`);
   }
 };
