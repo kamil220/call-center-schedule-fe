@@ -34,8 +34,8 @@ export function NavRoleBased() {
 
   const managerMenuItems = [
     {
-      title: "Pracownicy",
-      url: "/dashboard/employees",
+      title: "Employees",
+      url: "/dashboard/users",
       icon: IconUsers,
     },
   ]
@@ -45,11 +45,6 @@ export function NavRoleBased() {
   ]
 
   const administracjaMenuItems = [
-    {
-      title: "Users",
-      url: "/dashboard/users",
-      icon: IconUsers,
-    },
     {
       title: "Settings",
       url: "/admin/settings",
