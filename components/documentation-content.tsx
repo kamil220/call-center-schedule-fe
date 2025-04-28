@@ -381,7 +381,7 @@ export function DocumentationContent() {
           <ul>
             <li>PostgreSQL dla zaawansowanych funkcji analitycznych</li>
             <li>TimescaleDB dla danych czasowych (przydatne w analizie ruchu)</li>
-            <li>Redis dla cache'owania i obsługi sesji</li>
+            <li>Redis dla cache&apos;owania i obsługi sesji</li>
           </ul>
         </AlertDescription>
       </Alert>

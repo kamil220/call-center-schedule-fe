@@ -1,8 +1,6 @@
 import * as React from "react"
 import {
   IconDashboard,
-  IconFileReport,
-  IconTimeline,
   IconUsers,
   IconPhone,
   IconSettings,
