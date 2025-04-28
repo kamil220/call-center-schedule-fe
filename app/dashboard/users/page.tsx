@@ -1,6 +1,6 @@
 'use client';
 
-import { UserRole, UserStatus, ExtendedUser, ApiUser } from "@/types";
+import { UserRole, UserStatus, ApiUser } from "@/types";
 import { formatRoleName, formatStatus } from "@/lib/formatters";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -41,10 +41,28 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 
-// Define a type for the manager dropdown items
-interface ManagerOption {
-  id: string;
+// Add interface for skills
+interface ApiSkill {
+  id: number;
   name: string;
+  level: number;
+}
+
+interface ApiSkillCategory {
+  id: number;
+  name: string;
+  skills: ApiSkill[];
+}
+
+// Update ExtendedUser interface to include skills
+interface ExtendedUser {
+  id: string;
+  email: string;
+  role: UserRole;
+  status: UserStatus;
+  name: string;
+  hireDate?: string;
+  skills: ApiSkillCategory[];
 }
 
 export default function UsersPage() {
@@ -59,8 +77,7 @@ export default function UsersPage() {
   const [page, setPage] = useState(0);
   const [pageSize, setPageSize] = useState(10);
   const [totalPages, setTotalPages] = useState(1);
-  const [managerOptions, setManagerOptions] = useState<ManagerOption[]>([]); // Renamed state for manager options
-  
+
   // Form state for new user
   const [newUser, setNewUser] = useState<Partial<ExtendedUser>>({
     name: '',
@@ -68,8 +85,7 @@ export default function UsersPage() {
     role: UserRole.AGENT,
     status: UserStatus.ACTIVE,
     hireDate: format(new Date(), 'yyyy-MM-dd'),
-    manager: null,
-    managerName: null
+    skills: []
   });
 
   // Form validation state
@@ -114,9 +130,7 @@ export default function UsersPage() {
         );
       },
       filterFn: (row, id, value) => {
-        // Get the status value from the row
         const rowStatus = row.getValue(id) as UserStatus;
-        // Check if the filter value matches the row status directly
         return rowStatus === value;
       },
     },
@@ -136,24 +150,25 @@ export default function UsersPage() {
       },
     },
     {
-      accessorKey: "manager",
-      header: "Manager",
+      accessorKey: "skills",
+      header: "Paths",
       cell: ({ row }) => {
-        const managerName = row.original.managerName;
-        if (!managerName) return <div>-</div>;
-        return <div>{managerName}</div>;
-      },
-      filterFn: (row, id, value) => {
-        const rowValue = row.getValue(id);
-        // Special case for "null" value
-        if (value === "null" && rowValue === null) {
-          return true;
-        }
-        // For non-null values, check if the value matches
-        if (value !== "null" && rowValue !== null) {
-          return value === rowValue;
-        }
-        return false;
+        const skills = row.original.skills;
+        if (!skills || skills.length === 0) return <div>No paths</div>;
+        
+        return (
+          <div className="flex flex-wrap gap-1">
+            {skills.map((category) => (
+              <Badge 
+                key={category.id} 
+                variant="outline" 
+                className="mr-1 mb-1"
+              >
+                {category.name}
+              </Badge>
+            ))}
+          </div>
+        );
       },
     },
   ];
@@ -187,7 +202,6 @@ export default function UsersPage() {
     setIsLoading(true);
     setError(null);
     try {
-      // Convert our UserRole enum to the API's UserRole string type for the filter
       let apiRoles: UserRoleApi[] | undefined;
       const roleFilter = table.getColumn("role")?.getFilterValue() as UserRole | undefined;
       
@@ -200,11 +214,10 @@ export default function UsersPage() {
           case UserRole.TEAM_MANAGER: apiRole = 'ROLE_TEAM_MANAGER'; break;
         }
         if (apiRole) {
-          apiRoles = [apiRole]; // API expects an array now
+          apiRoles = [apiRole];
         }
       }
       
-      // Convert active/inactive status to boolean for API
       let activeStatus: boolean | undefined;
       const statusFilter = table.getColumn("status")?.getFilterValue() as UserStatus | undefined;
       if (statusFilter !== undefined) {
@@ -214,15 +227,13 @@ export default function UsersPage() {
       const response = await usersApi.getUsers({
         page,
         limit: pageSize,
-        roles: apiRoles, // Use roles array
+        roles: apiRoles,
         active: activeStatus,
         name: globalFilter || undefined,
       });
       
-      // Map API user type to ExtendedUser type
       const extendedUsers: ExtendedUser[] = response.items.map((apiUser: ApiUser) => {
-        // Convert API role format to our UserRole enum
-        let role = UserRole.AGENT; // Default
+        let role = UserRole.AGENT;
         if (apiUser.roles && apiUser.roles.length > 0) {
           if (apiUser.roles.includes('ROLE_ADMIN')) role = UserRole.ADMIN;
           else if (apiUser.roles.includes('ROLE_PLANNER')) role = UserRole.PLANNER;
@@ -235,9 +246,8 @@ export default function UsersPage() {
           role,
           status: apiUser.active ? UserStatus.ACTIVE : UserStatus.INACTIVE,
           name: apiUser.fullName || `${apiUser.firstName || ''} ${apiUser.lastName || ''}`.trim(),
-          hireDate: apiUser.hireDate || format(new Date(), 'yyyy-MM-dd'), // Use API hireDate if available, otherwise use current date
-          manager: apiUser.manager?.id || null, // Use manager ID from API if available
-          managerName: apiUser.manager?.fullName || null, // Store manager name for display
+          hireDate: apiUser.hireDate || format(new Date(), 'yyyy-MM-dd'),
+          skills: apiUser.skills || [],
         };
       });
       
@@ -251,39 +261,10 @@ export default function UsersPage() {
     }
   };
 
-  // Function to fetch all potential managers for dropdowns
-  const fetchManagers = async () => {
-    try {
-      const managerRoles: UserRoleApi[] = ['ROLE_ADMIN', 'ROLE_PLANNER', 'ROLE_TEAM_MANAGER'];
-      // Fetch all managers in a single request using the new 'roles' filter
-      const response = await usersApi.getUsers({ 
-        limit: 100, // Fetch up to 100 potential managers
-        roles: managerRoles 
-      });
-
-      const managerOptions: ManagerOption[] = response.items.map(user => ({
-        id: user.id,
-        name: user.fullName || `${user.firstName || ''} ${user.lastName || ''}`.trim(),
-      }));
-      
-      // No need for deduplication if backend handles roles correctly
-      setManagerOptions(managerOptions);
-    } catch (err) {
-      console.error('Error fetching managers:', err);
-      toast("Failed to load managers list", {
-        description: extractErrorMessage(err),
-      });
-    }
-  };
-
-  // Fetch users and managers on initial load
+  // Fetch users on initial load
   useEffect(() => {
     fetchUsers();
   }, [page, pageSize, globalFilter, columnFilters]);
-
-  useEffect(() => {
-    fetchManagers(); // Fetch managers once on component mount
-  }, []);
 
   // Validate form fields
   const validateForm = () => {
@@ -348,8 +329,7 @@ export default function UsersPage() {
         role: UserRole.AGENT,
         status: UserStatus.ACTIVE,
         hireDate: format(new Date(), 'yyyy-MM-dd'),
-        manager: null,
-        managerName: null
+        skills: []
       });
       setFormErrors({});
       
@@ -556,34 +536,6 @@ export default function UsersPage() {
                     onChange={(e) => setNewUser({ ...newUser, hireDate: e.target.value })}
                   />
                 </div>
-                <div className="grid grid-cols-4 items-center gap-4">
-                  <Label htmlFor="manager" className="text-right">
-                    Manager
-                  </Label>
-                  <Select
-                    value={newUser.manager || "no_manager"}
-                    onValueChange={(value) => {
-                      const selectedManager = value === "no_manager" ? null : managerOptions.find(m => m.id === value);
-                      setNewUser({ 
-                        ...newUser, 
-                        manager: value === "no_manager" ? null : value,
-                        managerName: selectedManager ? selectedManager.name : null
-                      });
-                    }}
-                  >
-                    <SelectTrigger id="manager" className="col-span-3">
-                      <SelectValue placeholder="Select a manager" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="no_manager">No Manager</SelectItem>
-                      {managerOptions.map((managerOpt) => (
-                        <SelectItem key={managerOpt.id} value={managerOpt.id}>
-                          {managerOpt.name}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
               </div>
               <DialogFooter>
                 <Button type="submit" onClick={handleAddUser} disabled={isSubmitting}>
@@ -611,7 +563,6 @@ export default function UsersPage() {
                 />
               </div>
               <div className="flex items-center gap-2">
-                {/* Role filter */}
                 <Select
                   value={(table.getColumn("role")?.getFilterValue() as string) || "all_roles"}
                   onValueChange={(value) => {
@@ -635,7 +586,6 @@ export default function UsersPage() {
                   </SelectContent>
                 </Select>
 
-                {/* Status filter */}
                 <Select
                   value={(table.getColumn("status")?.getFilterValue() as string) || "all_statuses"}
                   onValueChange={(value) => {
@@ -654,48 +604,6 @@ export default function UsersPage() {
                     {Object.values(UserStatus).map((status) => (
                       <SelectItem key={status} value={status}>
                         {formatStatus(status)}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-
-                {/* Manager filter */}
-                <Select
-                  value={(() => {
-                    const filterValue = table.getColumn("manager")?.getFilterValue() as string;
-                    if (!filterValue) return "all_managers";
-                    if (filterValue === "null") return "no_manager";
-                    return filterValue;
-                  })()}
-                  onValueChange={(value) => {
-                    if (value === "all_managers") {
-                      table.getColumn("manager")?.setFilterValue(undefined);
-                    } else if (value === "no_manager") {
-                      table.getColumn("manager")?.setFilterValue("null"); 
-                    } else {
-                      table.getColumn("manager")?.setFilterValue(value); 
-                    }
-                  }}
-                >
-                  <SelectTrigger className="w-[180px]">
-                    <SelectValue placeholder="Filter by manager">
-                      {(() => {
-                        const filterValue = table.getColumn("manager")?.getFilterValue() as string;
-                        if (!filterValue) return "All Managers";
-                        if (filterValue === "null") return "No Manager";
-                        // Find name from the fetched manager options list
-                        const manager = managerOptions.find(m => m.id === filterValue);
-                        return manager ? manager.name : "All Managers"; // Display selected manager name
-                      })()}
-                    </SelectValue>
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all_managers">All Managers</SelectItem>
-                    <SelectItem value="no_manager">No Manager</SelectItem>
-                    {/* Use managerOptions for the filter list */}
-                    {managerOptions.map((managerOpt) => (
-                      <SelectItem key={managerOpt.id} value={managerOpt.id}>
-                        {managerOpt.name}
                       </SelectItem>
                     ))}
                   </SelectContent>
