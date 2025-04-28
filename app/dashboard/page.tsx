@@ -1,47 +1,8 @@
 'use client'
 import { ChartAreaInteractive } from "@/components/chart-area-interactive"
-import { DataTable } from "@/components/data-table"
 import { SectionCards } from "@/components/section-cards"
 import { SiteHeader } from "@/components/site-header"
 import { ForecastingView } from "@/components/forecasting/forecasting-view"
-
-import data from "./data.json"
-
-// Example forecasting data - replace with actual API call
-const forecastingData = {
-  "data": {
-    "2025-05-01": {
-      "Administration": {
-        "hours": {
-          "6": {
-            "required_employees": 2,
-            "metadata": {}
-          },
-          "7": {
-            "required_employees": 3,
-            "metadata": {}
-          }
-        }
-      },
-      "Customer Service": {
-        "hours": {
-          "6": {
-            "required_employees": 1,
-            "metadata": {}
-          }
-        }
-      }
-    }
-  },
-  "meta": {
-    "start_date": "2025-05-01",
-    "end_date": "2025-05-20",
-    "strategy": "default",
-    "available_strategies": {
-      "historical_analysis": "Forecasts demand based on historical call data analysis"
-    }
-  }
-}
 
 export default function Page() {
   return (
@@ -55,9 +16,8 @@ export default function Page() {
               <ChartAreaInteractive />
             </div>
             <div className="px-4 lg:px-6">
-              <ForecastingView data={forecastingData} />
+              <ForecastingView />
             </div>
-            <DataTable data={data} />
           </div>
         </div>
       </div>
