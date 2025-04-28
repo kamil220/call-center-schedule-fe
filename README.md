@@ -1,9 +1,51 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Call Center Schedule Frontend
 
-## Getting Started
+A Call Center scheduling management system built with Next.js 14, Tailwind CSS, and shadcn/ui.
 
-First, run the development server:
+## 🚀 Features
 
+- Employee profile management
+- Skills and competencies definition
+- Availability planning (schedules, vacations, sick leaves)
+- Shift preferences handling
+- Schedule generation and editing
+- Schedule publication for employees
+- Reporting and analytics
+
+## 🛠️ Technologies
+
+- **Framework:** Next.js 14
+- **Styling:** Tailwind CSS v4
+- **UI Components:** shadcn/ui v4
+- **State Management:** Zustand
+- **Language:** TypeScript
+- **Development Environment:** Node.js >= 18
+
+## 📦 Requirements
+
+- Node.js 18.0.0 or newer
+- npm or yarn or pnpm or bun
+
+## 🏃‍♂️ Getting Started
+
+1. Clone the repository:
+```bash
+git clone https://github.com/kamil220/call-center-schedule-fe.git
+cd call-center-schedule-fe
+```
+
+2. Install dependencies:
+```bash
+npm install
+# or
+yarn install
+# or
+pnpm install
+# or
+bun install
+```
+
+3. Run the development server:
 ```bash
 npm run dev
 # or
@@ -14,23 +56,56 @@ pnpm dev
 bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+4. Open [http://localhost:3000](http://localhost:3000) in your browser.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## 📁 Project Structure
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+```
+├── app/                  # Next.js App Router pages and layouts
+├── components/          # React components
+│   ├── ui/             # shadcn/ui base components
+│   └── diagrams/       # Diagrams and visualizations
+├── hooks/              # Custom React hooks
+├── services/           # API and business logic
+├── store/             # State management (Zustand)
+├── lib/               # Utility functions
+├── types/             # TypeScript type definitions
+└── public/            # Static assets
+```
 
-## Learn More
+## 🔧 Configuration
 
-To learn more about Next.js, take a look at the following resources:
+The project uses the following tools and configurations:
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+- **TypeScript** for type safety
+- **ESLint** for linting
+- **Prettier** for code formatting
+- **Tailwind CSS** for styling
+- **shadcn/ui** for UI components
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+## 🌐 API
 
-## Deploy on Vercel
+The application communicates with a Symfony backend via REST API. API documentation will be available after running the backend.
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+## 🧪 Testing
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+To run tests:
+
+```bash
+npm test
+# or
+yarn test
+# or
+pnpm test
+# or
+bun test
+```
+
+## 📚 Documentation
+
+Complete project documentation, including:
+- Requirements analysis
+- System architecture
+- Flow diagrams
+- Scheduling algorithms
+is available in the application at [http://localhost:3000/docs](http://localhost:3000/docs)
